@@ -80,3 +80,20 @@ The level of detail represented by each row.
 
 **Why it matters:**  
 Granularity determines how the data should be aggregated, analyzed, and modeled.
+
+## 7. Fanout
+
+**Definition:**
+A fan-out happens when one input row turns into multiple output rows during an operation like a database join or merge.
+
+## 8. Rated Power
+
+**Definition:**
+The rated power of an inverter is the maximum continuous electrical output (measured in watts or kilowatts) that the device can supply safely and stably over a long period without overheating or shutting down
+
+## 9. Capacity Factor
+
+**Defnition:**
+The maximum energy produced out of its theoritical limit
+
+> Formula: Actual Energy Produced / (Rated Power \* Time Period)
