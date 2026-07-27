@@ -50,6 +50,62 @@ construction.
 
 **Evidence:**
 
+### D-005 :- Feature Selection for Client-Invariant Training
+
+**Status:** Decided
+
+**Decision:**
+Drop the features `tilt`, `azimuth`, `station_hash_id`, and `source` before model training.
+
+**Evidence:**
+A variance audit was performed to identify features that remain constant within each client (station). These features were then evaluated across the pooled dataset. `04_scope-feature.ipynb`
+
+- `tilt` and `azimuth` were found to be **globally constant** (`n_unique_pooled = 1`). Since every observation shares the same value, they contain no predictive information and only increase feature dimensionality. Their removal is standard data-cleaning (housekeeping) and does not affect model behaviour.
+
+- `station_hash_id` and `source` were found to vary **only across clients**, not within clients. These features encode client identity rather than the underlying physical relationship between weather variables and power generation. Retaining them would allow the model to memorize station-specific behaviour instead of learning patterns that generalize to unseen stations.
+
+Because the experimental protocol evaluates generalization using Leave-One-Source-Out (LOSO), retaining client identifiers would introduce information leakage and compromise the validity of the evaluation. Therefore, these features are intentionally removed as a methodological design decision rather than a preprocessing convenience.
+
+**Rationale:**
+The objective of the study is to evaluate whether Federated Learning can generalize to previously unseen clients. Feature selection should therefore preserve only predictive variables that represent the underlying forecasting problem and exclude features that either:
+
+1. provide no information (`tilt`, `azimuth`), or
+2. reveal client identity (`station_hash_id`, `source`).
+
+This ensures that model performance reflects learned relationships between input variables and photovoltaic power generation rather than memorization of individual client characteristics.
+
+### D-006 :- Remove Redundant Shortwave Radiation Feature
+
+**Status:** Decided
+
+**Decision**
+
+Retain `direct_radiation` and `diffuse_radiation`.
+Remove `shortwave_radiation` during model training.
+
+**Evidence**
+
+The physical identity
+
+shortwave_radiation = direct_radiation + diffuse_radiation
+
+was verified exactly over all 13,444 daytime observations. For detail refer to `04_scope-feature.ipynb`.  
+and cell 4
+
+Residual statistics:
+
+- mean = 0.0
+- std = 0.0
+- max = 0.0
+
+**Rationale**
+
+`shortwave_radiation` is a deterministic linear combination of the other two features and therefore contributes no additional information.
+
+The direct and diffuse components preserve cloudiness information that the summed measurement does not.
+
+Removing the derived feature reduces redundancy and avoids perfect multicollinearity in linear models.
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it

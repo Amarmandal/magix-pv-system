@@ -97,3 +97,31 @@ The rated power of an inverter is the maximum continuous electrical output (meas
 The maximum energy produced out of its theoritical limit
 
 > Formula: Actual Energy Produced / (Rated Power \* Time Period)
+
+### DK-003 :- Interpretation of `terrestrial_radiation`
+
+**Question**
+
+Does the `terrestrial_radiation` feature represent Earth's emitted longwave infrared radiation or solar radiation?
+
+**Hypotheses**
+
+- H1: Solar radiation → should approach zero during nighttime.
+- H2: Longwave terrestrial radiation → should remain substantial during both day and night.
+
+**Evidence**
+
+Nighttime statistics:
+
+- mean = 0.1 W/m²
+- max = 25.1 W/m²
+- 97.4% of observations are exactly zero
+
+Daytime statistics:
+
+- mean = 597.2 W/m²
+- max = 1254.1 W/m²
+
+**Conclusion**
+
+The observed behavior strongly matches solar radiation rather than continuous terrestrial longwave infrared emission. The feature name appears misleading or inconsistent with the accompanying documentation.
