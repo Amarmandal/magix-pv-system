@@ -98,6 +98,8 @@ The maximum energy produced out of its theoritical limit
 
 > Formula: Actual Energy Produced / (Rated Power \* Time Period)
 
+---
+
 ### DK-003 :- Interpretation of `terrestrial_radiation`
 
 **Question**
@@ -125,3 +127,31 @@ Daytime statistics:
 **Conclusion**
 
 The observed behavior strongly matches solar radiation rather than continuous terrestrial longwave infrared emission. The feature name appears misleading or inconsistent with the accompanying documentation.
+
+### DK-006 :- Verification of Physics-Derived Features
+
+Two derived features were validated using the observed data.  
+Notebook: `04_scope-features.ipynb`.  
+Cell: 5
+
+**Recovered solar geometry**
+
+cos(zenith) = direct_radiation / direct_normal_irradiance
+
+Observed statistics:
+
+- min = 0.058
+- max = 0.946
+
+All recovered values lie within the physically valid interval [0,1], confirming the feature behaves as expected.
+
+**Recovered clearness index**
+
+kt = shortwave_radiation / terrestrial_radiation
+
+Observed statistics:
+
+- mean = 0.477
+- range = [0.014, 0.791]
+
+The distribution matches the expected behavior of a clearness index, providing additional evidence that `terrestrial_radiation` behaves as top-of-atmosphere solar irradiance rather than terrestrial longwave radiation.

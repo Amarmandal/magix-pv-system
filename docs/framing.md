@@ -106,6 +106,22 @@ The direct and diffuse components preserve cloudiness information that the summe
 
 Removing the derived feature reduces redundancy and avoids perfect multicollinearity in linear models.
 
+### D-007 :- Exclude Instantaneous Radiation Features
+
+**Status:** Decided
+
+**Decision**
+
+Exclude all \*\_instant radiation variables from the baseline feature specification.
+
+**Evidence**
+
+The correlation between each hourly-mean radiation variable and its corresponding instantaneous measurement was weak (approximately −0.35 to 0.22), indicating that the instantaneous variables do not behave as direct counterparts of the hourly observations.
+
+**Rationale**
+
+Because their temporal relationship could not be established confidently, the instantaneous variables were excluded from the baseline feature set. They may be revisited after validating their timestamp semantics.
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it

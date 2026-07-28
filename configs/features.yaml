@@ -1,0 +1,30 @@
+target: capacity_factor
+history:
+- capacity_factor
+geometry:
+- cos_zenith
+- hour_sin
+- hour_cos
+- doy_sin
+- doy_cos
+weather_past:
+- temperature_2m
+- direct_radiation
+- diffuse_radiation
+- global_tilted_irradiance
+- kt
+weather_future:
+- temperature_2m
+- direct_radiation
+- diffuse_radiation
+- global_tilted_irradiance
+- kt
+dropped_leaky:
+- station_hash_id
+- source
+dropped_const:
+- tilt
+- azimuth
+dropped_redundant:
+- shortwave_radiation
+- terrestrial_radiation

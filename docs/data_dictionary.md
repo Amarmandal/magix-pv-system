@@ -46,6 +46,7 @@
 - **shortwave_radiation:** Total incoming shortwave solar radiation. Verified to equal direct_radiation + diffuse_radiation exactly.
 - **direct_radiation:** Direct beam solar radiation reaching the surface without atmospheric scattering.
 - **diffuse_radiation:** Solar radiation scattered by clouds and the atmosphere before reaching the surface.
+- **\_instant:** **Excluded**, Instantaneous measurements were excluded from the baseline feature set. Their relationship to the hourly-mean variables was not sufficiently established during data validation.
 
 ## Target
 
