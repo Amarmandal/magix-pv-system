@@ -76,7 +76,11 @@ The level of detail represented by each row.
 
 **Granularity of this dataset:**
 
-> One row represents **one inverter at one hour**.
+> One row represents **one station at one hour**.
+
+Inverter-level data exists in the source dataset (`hourly_pv_weather_inverter.csv`),
+but D-001 selected the station-level fact table, so the working grain is
+(`station_hash_id`, `measured_ts`).
 
 **Why it matters:**  
 Granularity determines how the data should be aggregated, analyzed, and modeled.
@@ -93,8 +97,8 @@ The rated power of an inverter is the maximum continuous electrical output (meas
 
 ## 9. Capacity Factor
 
-**Defnition:**
-The maximum energy produced out of its theoritical limit
+**Definition:**
+The fraction of its theoretical maximum that a station actually produced.
 
 > Formula: Actual Energy Produced / (Rated Power \* Time Period)
 
@@ -135,6 +139,10 @@ Notebook: `04_scope-features.ipynb`.
 Cell: 5
 
 **Recovered solar geometry**
+
+> **Superseded by D-008.** The formula below is no longer the implementation in
+> use. It is kept as the record of the original validation, and as the baseline
+> the replacement was checked against.
 
 cos(zenith) = direct_radiation / direct_normal_irradiance
 

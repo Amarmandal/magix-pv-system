@@ -6,8 +6,9 @@
 | -------------------------------- | -------- | -------------------------------------------- | ---------- |
 | station_hash_id                  | string   | Unique station identifier                    | ID         |
 | measured_ts                      | datetime | Hourly timestamp                             | Time       |
-| total_produced_energy            | float    | Energy produced during the hour              | **Target** |
+| total_produced_energy            | float    | Energy produced during the hour              | Feature    |
 | source                           | int      | Data source identifier                       | Metadata   |
+| capacity_factor                  | float    | total_produced_energy / station rated kW     | **Target** |
 | ac_power                         | float    | AC output power                              | Feature    |
 | dc_power                         | float    | DC input power                               | Feature    |
 | efficiency                       | float    | Inverter efficiency                          | Feature    |
@@ -19,17 +20,17 @@
 | shortwave_radiation              | float    | direct radiation + diffuse radiation         | Feature    |
 | direct_radiation                 | float    | Direct solar radiation                       | Feature    |
 | diffuse_radiation                | float    | Diffuse solar radiation                      | Feature    |
-| direct_normal_irradiance         | float    | Direct Normal Irradiance (DNI)               | Feature    |
 | global_tilted_irradiance         | float    | Tilted Irradiance (GTI)                      | Feature    |
 | terrestrial_radiation            | float    | Solar radiation because it behaves like that | Feature    |
-| terrestrial_radiation_instant    | float    | Instantaneous terrestrial radiation          | Feature    |
-| global_tilted_irradiance_instant | float    | Instantaneous GTI                            | Feature    |
-| direct_normal_irradiance_instant | float    | Instantaneous DNI                            | Feature    |
-| diffuse_radiation_instant        | float    | Instantaneous diffuse radiation              | Feature    |
-| direct_radiation_instant         | float    | Instantaneous direct radiation               | Feature    |
-| shortwave_radiation_instant      | float    | Instantaneous shortwave radiation            | Feature    |
-| tilt                             | float    | Solar panel tilt angle                       | Feature    |
-| azimuth                          | float    | Solar panel orientation                      | Feature    |
+| terrestrial_radiation_instant    | float    | Instantaneous terrestrial radiation          | Unreliable |
+| global_tilted_irradiance_instant | float    | Instantaneous GTI                            | Unreliable |
+| direct_normal_irradiance_instant | float    | Instantaneous DNI                            | Unreliable |
+| diffuse_radiation_instant        | float    | Instantaneous diffuse radiation              | Unreliable |
+| direct_radiation_instant         | float    | Instantaneous direct radiation               | Unreliable |
+| shortwave_radiation_instant      | float    | Instantaneous shortwave radiation            | Unreliable |
+| direct_normal_irradiance         | float    | Direct Normal Irradiance (DNI)               | Excluded   |
+| tilt                             | float    | Solar panel tilt angle                       | Excluded   |
+| azimuth                          | float    | Solar panel orientation                      | Excluded   |
 
 ---
 
@@ -42,7 +43,7 @@
 
 ## Features Categories
 
-- **terrestrial_radiation:** Behaves as solar radiation (≈0 during nighttime). Although named terrestrial_radiation, exploratory analysis indicates it represents solar radiation rather than continuous terrestrial longwave infrared radiation.
+- **terrestrial_radiation:** Top-of-atmosphere solar radiation on a horizontal surface. Named misleadingly.
 - **shortwave_radiation:** Total incoming shortwave solar radiation. Verified to equal direct_radiation + diffuse_radiation exactly.
 - **direct_radiation:** Direct beam solar radiation reaching the surface without atmospheric scattering.
 - **diffuse_radiation:** Solar radiation scattered by clouds and the atmosphere before reaching the surface.
@@ -50,8 +51,8 @@
 
 ## Target
 
-- total_produced_energy (for regression)
-- total_energy_produced (h hour ahead using historical data)
+- capacity_factor (for regression)
+- capacity_factor (h hour ahead using historical data)
 
 ---
 
