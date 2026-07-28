@@ -122,6 +122,31 @@ The correlation between each hourly-mean radiation variable and its correspondin
 
 Because their temporal relationship could not be established confidently, the instantaneous variables were excluded from the baseline feature set. They may be revisited after validating their timestamp semantics.
 
+### D-008 :- Replace Weather-derived cos_zenith with Deterministic Astronomical Computation
+
+**Status:** Decided
+
+**Decision**
+
+Replace the previous cos_zenith implementation based on
+
+$$\cos(\text{zenith}) = \frac{\text{direct\_radiation}}{\text{direct\_normal\_irradiance}}$$
+
+with the deterministic implementation derived from top-of-atmosphere (terrestrial) radiation.
+
+**Evidence**
+
+- Correlation with previous implementation: 0.9991
+- Maximum absolute deviation: 0.0442
+- Coverage increased from 11,962 to 13,444 daytime observations (+1,482 rows, +11%).
+- `04_scope-features.ipynb` Check the Resolving problematic cos zenith cell
+
+**Rationale**
+
+The previous implementation depended on measured weather variables (direct_radiation and direct_normal_irradiance) and excluded observations where DNI ≤ 10, reducing coverage and introducing weather-dependent feature availability.
+
+The new implementation derives cos_zenith from deterministic astronomical quantities, making it available for all daytime observations and for any future prediction timestamp without requiring weather measurements.
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it
@@ -142,6 +167,19 @@ of never-commissioned capacity, making b59685487 a false chronic underperformer.
 ## 5. Open — deferred
 
 ### Q-001: Forecast Horizon H
+
+### Q-002 · RESOLVED — terrestrial_radiation is top-of-atmosphere solar
+
+Night: mean 0.1 W/m², 97.4% exactly zero.  
+Day: mean 597.2 W/m², matching
+1361 × cos(zenith) at 41.5°N (~600).  
+The paper's description ("infrared
+emitted by Earth's surface") is incorrect; the column is extraterrestrial
+solar radiation on the horizontal.
+Unblocks kt (clearness index). Both terrestrial_radiation and
+shortwave_radiation retained in `load` as kt inputs, excluded from `features`.
+Note for writeup: column semantics verified against data, not the source
+publication.
 
 ## 6. Protocol freeze
 

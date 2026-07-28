@@ -1,39 +1,73 @@
 target: capacity_factor
-history:
+source_columns:
+- measured_ts
+- total_produced_energy
+- temperature_2m
+- shortwave_radiation
+- terrestrial_radiation
+- direct_radiation
+- diffuse_radiation
+- global_tilted_irradiance
+derived:
+  cos_zenith:
+    from:
+    - terrestrial_radiation
+    - measured_ts
+    rule: TOA / (1361 * E0(doy)), clipped [0,1]
+  kt:
+    from:
+    - shortwave_radiation
+    - terrestrial_radiation
+    rule: GHI / TOA
+    guard: TOA > 10 W/m2 else NaN
+  is_daylight:
+    from:
+    - terrestrial_radiation
+    rule: TOA > 10
+  hour_sin:
+    from:
+    - measured_ts
+  hour_cos:
+    from:
+    - measured_ts
+  doy_sin:
+    from:
+    - measured_ts
+  doy_cos:
+    from:
+    - measured_ts
+model_matrix:
+  history:
   - capacity_factor
-geometry:
+  geometry:
   - cos_zenith
   - hour_sin
   - hour_cos
   - doy_sin
   - doy_cos
-weather_past:
+  - is_daylight
+  weather_past:
   - temperature_2m
   - direct_radiation
   - diffuse_radiation
   - global_tilted_irradiance
   - kt
-weather_future:
+  weather_future:
   - temperature_2m
   - direct_radiation
   - diffuse_radiation
   - global_tilted_irradiance
   - kt
-dropped:
-  shortwave_radiation:
-    reason: deterministic_sum_of_direct_and_diffuse
-
-  terrestrial_radiation:
-    reason: replaced_by_kt
-
-  station_hash_id:
-    reason: client_identifier
-
-  source:
-    reason: client_identifier
-
-  tilt:
-    reason: globally_constant
-
-  azimuth:
-    reason: globally_constant
+excluded:
+  consumed_by_derived:
+    shortwave_radiation: numerator of kt; also == direct + diffuse exactly
+    terrestrial_radiation: source of cos_zenith and kt denominator; pure geometry,
+      carries no weather signal
+  leaky_client_id:
+  - station_hash_id
+  - source
+  globally_constant:
+  - tilt
+  - azimuth
+  unreliable:
+  - '*_instant'

@@ -56,3 +56,6 @@
 ---
 
 ## Derived Feature
+
+- kt = shortwave_radiation / terrestrial_radiation
+- cos(zenith)
