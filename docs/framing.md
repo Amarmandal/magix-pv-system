@@ -147,11 +147,7 @@ The previous implementation depended on measured weather variables (direct_radia
 
 The new implementation derives cos_zenith from deterministic astronomical quantities, making it available for all daytime observations and for any future prediction timestamp without requiring weather measurements.
 
-## 4. Open — blocking
-
-Question · why it blocks · what would resolve it · which notebook owns it
-
-### D-005 :- Target = capacity factor, denominator = producing inverters only
+### D-009 :- Target = capacity factor, denominator = producing inverters only
 
 **Status:** Decided on 2026-07-25
 
@@ -163,6 +159,41 @@ are excluded so the denominator matches the numerator's device set.
 
 **Rejected:** summing all 53 rated inverters — would divide real output by 165kW
 of never-commissioned capacity, making b59685487 a false chronic underperformer.
+
+### D-010 — Impossible Capacity Factors Set to NaN
+
+**Status:** Decided (2026-07-28)  
+**Evidence:** `05_target-capacity-factor.ipynb`
+
+**Decision**
+
+Set all `capacity_factor > 1.0` values to `NaN`.
+
+**Rationale**
+
+A capacity factor greater than **1.0** is physically impossible—a photovoltaic system cannot produce more than its rated capacity over an hourly interval.
+
+**Evidence**
+
+- **87** invalid rows detected out of **17,983** total rows (**0.48%**).
+- Distribution:
+  - **S3:** 1 row
+  - **S7:** 86 rows
+
+**Implementation**
+
+Values were replaced with `NaN` rather than deleting the rows because `splits.json` preserves row indices. Removing rows would invalidate the existing train/test splits and break `load_split()`.
+
+**Validation**
+
+The anomalies are **not** caused by missing timestamps:
+
+- All 86 affected rows in **S7** occur at a regular **1-hour interval** (`std = 0.0`).
+- The actual timestamp gaps occur in other (valid) observations, with gaps of up to **77 hours**.
+
+## 4. Open — blocking
+
+Question · why it blocks · what would resolve it · which notebook owns it
 
 ## 5. Open — deferred
 
