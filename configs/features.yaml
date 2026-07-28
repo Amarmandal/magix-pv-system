@@ -1,73 +1,81 @@
 target: capacity_factor
 source_columns:
-- measured_ts
-- total_produced_energy
-- temperature_2m
-- shortwave_radiation
-- terrestrial_radiation
-- direct_radiation
-- diffuse_radiation
-- global_tilted_irradiance
+  - measured_ts
+  - total_produced_energy
+  - temperature_2m
+  - shortwave_radiation
+  - terrestrial_radiation
+  - direct_radiation
+  - diffuse_radiation
+  - global_tilted_irradiance
 derived:
   cos_zenith:
     from:
-    - terrestrial_radiation
-    - measured_ts
+      - terrestrial_radiation
+      - measured_ts
     rule: TOA / (1361 * E0(doy)), clipped [0,1]
   kt:
     from:
-    - shortwave_radiation
-    - terrestrial_radiation
+      - shortwave_radiation
+      - terrestrial_radiation
     rule: GHI / TOA
     guard: TOA > 10 W/m2 else NaN
   is_daylight:
     from:
-    - terrestrial_radiation
+      - terrestrial_radiation
     rule: TOA > 10
   hour_sin:
     from:
-    - measured_ts
+      - measured_ts
   hour_cos:
     from:
-    - measured_ts
+      - measured_ts
   doy_sin:
     from:
-    - measured_ts
+      - measured_ts
   doy_cos:
     from:
-    - measured_ts
+      - measured_ts
 model_matrix:
   history:
-  - capacity_factor
+    - capacity_factor
   geometry:
-  - cos_zenith
-  - hour_sin
-  - hour_cos
-  - doy_sin
-  - doy_cos
-  - is_daylight
+    - cos_zenith
+    - hour_sin
+    - hour_cos
+    - doy_sin
+    - doy_cos
+    - is_daylight
   weather_past:
-  - temperature_2m
-  - direct_radiation
-  - diffuse_radiation
-  - global_tilted_irradiance
-  - kt
+    - temperature_2m
+    - direct_radiation
+    - diffuse_radiation
+    - global_tilted_irradiance
+    - kt
   weather_future:
-  - temperature_2m
-  - direct_radiation
-  - diffuse_radiation
-  - global_tilted_irradiance
-  - kt
+    - temperature_2m
+    - direct_radiation
+    - diffuse_radiation
+    - global_tilted_irradiance
+    - kt
 excluded:
+  not_available_at_forecast_time:
+    ac_power: instantaneous AC output — effectively the target itself
+    dc_power: instantaneous DC input — the target one conversion step upstream
+    efficiency: ac_power / dc_power — derived from two target measurements
+    device_temperature: rises with production — a consequence of the target
+    perc_state_on: machine state during the predicted hour — unknowable in advance
+    perc_state_off: same
+    perc_state_error: same
   consumed_by_derived:
     shortwave_radiation: numerator of kt; also == direct + diffuse exactly
     terrestrial_radiation: source of cos_zenith and kt denominator; pure geometry,
       carries no weather signal
   leaky_client_id:
-  - station_hash_id
-  - source
+    - station_hash_id
+    - source
   globally_constant:
-  - tilt
-  - azimuth
+    - tilt
+    - azimuth
   unreliable:
-  - '*_instant'
+    - "*_instant"
