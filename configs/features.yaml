@@ -1,30 +1,39 @@
 target: capacity_factor
 history:
-- capacity_factor
+  - capacity_factor
 geometry:
-- cos_zenith
-- hour_sin
-- hour_cos
-- doy_sin
-- doy_cos
+  - cos_zenith
+  - hour_sin
+  - hour_cos
+  - doy_sin
+  - doy_cos
 weather_past:
-- temperature_2m
-- direct_radiation
-- diffuse_radiation
-- global_tilted_irradiance
-- kt
+  - temperature_2m
+  - direct_radiation
+  - diffuse_radiation
+  - global_tilted_irradiance
+  - kt
 weather_future:
-- temperature_2m
-- direct_radiation
-- diffuse_radiation
-- global_tilted_irradiance
-- kt
-dropped_leaky:
-- station_hash_id
-- source
-dropped_const:
-- tilt
-- azimuth
-dropped_redundant:
-- shortwave_radiation
-- terrestrial_radiation
+  - temperature_2m
+  - direct_radiation
+  - diffuse_radiation
+  - global_tilted_irradiance
+  - kt
+dropped:
+  shortwave_radiation:
+    reason: deterministic_sum_of_direct_and_diffuse
+
+  terrestrial_radiation:
+    reason: replaced_by_kt
+
+  station_hash_id:
+    reason: client_identifier
+
+  source:
+    reason: client_identifier
+
+  tilt:
+    reason: globally_constant
+
+  azimuth:
+    reason: globally_constant
