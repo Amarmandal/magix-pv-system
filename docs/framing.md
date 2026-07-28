@@ -191,6 +191,37 @@ The anomalies are **not** caused by missing timestamps:
 - All 86 affected rows in **S7** occur at a regular **1-hour interval** (`std = 0.0`).
 - The actual timestamp gaps occur in other (valid) observations, with gaps of up to **77 hours**.
 
+### D-011 — Exclude Contemporaneous System-State Columns
+
+**Status:** Decided (2026-07-28)
+
+**Decision**
+
+Exclude the following columns from the model feature set:
+
+- `ac_power`
+- `dc_power`
+- `efficiency`
+- `device_temperature`
+- `perc_state_on`
+- `perc_state_off`
+- `perc_state_error`
+
+**Rationale**
+
+These features are **not available at forecast time**.
+
+- `ac_power`, `dc_power`, `efficiency`, and `device_temperature` are measurements of the target or its direct consequences, introducing **target leakage**.
+- `perc_state_on`, `perc_state_off`, and `perc_state_error` describe the inverter's operating state during the **predicted hour**, which cannot be known before the prediction is made.
+
+**Scope**
+
+This decision is valid for **all forecasting horizons** (`H ≥ 1`) and is therefore independent of **Q-001**.
+
+**Future Use**
+
+These features remain valuable as **lagged features** once the forecasting horizon is fixed (`lag ≥ H`). They are also suitable for **anomaly detection** tasks, where the current system state is the signal of interest rather than a source of leakage.
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it
