@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[3]
-LABELS_PATH = ROOT / "data/processed/station_labels.json"
+LABELS_PATH = ROOT / "configs/station_labels.json"
 
 
 def station_labels(path: Path = LABELS_PATH) -> dict:

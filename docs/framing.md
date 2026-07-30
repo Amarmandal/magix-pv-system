@@ -222,13 +222,39 @@ This decision is valid for **all forecasting horizons** (`H ≥ 1`) and is there
 
 These features remain valuable as **lagged features** once the forecasting horizon is fixed (`lag ≥ H`). They are also suitable for **anomaly detection** tasks, where the current system state is the signal of interest rather than a source of leakage.
 
+## D-012 — Forecast Horizon: H = 24 Hours
+
+**Status:** ✅ Decided (2026-07-30)  
+**Resolves:** Q-001
+
+### Decision
+
+Use a **24-hour (day-ahead)** forecast horizon. All historical (lag) features must use **lag ≥ 24 hours**.
+
+### Rationale
+
+- At **H = 1**, **persistence** (current production ≈ next-hour production) is the dominant signal. Each client can solve the task independently, leaving little benefit for Federated Learning (FL).
+- At **H = 24**, persistence is much weaker. The prediction depends primarily on the **weather → power generation** relationship, which is governed by the same underlying physics across all solar plants.
+- This shared relationship is exactly the type of knowledge that **Federated Averaging** can learn and transfer between clients.
+- A 24-hour horizon also aligns with **day-ahead electricity market operations**, making the task practically relevant.
+
+### Trade-offs
+
+- Higher forecast errors compared to short-horizon forecasting.
+- Lag-24 features are unavailable for some samples due to ~21% inter-day missingness.
+- Weather and solar geometry features are unaffected and remain available for all samples.
+
+### Consequence
+
+The project evaluates whether Federated Learning can learn a **shared weather-to-production mapping**, rather than simply matching a strong persistence baseline.
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it
 
 ## 5. Open — deferred
 
-### Q-001: Forecast Horizon H
+### Q-001: Resolved - See D-012
 
 ### Q-002 · RESOLVED — terrestrial_radiation is top-of-atmosphere solar
 
