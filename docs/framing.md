@@ -271,6 +271,33 @@ Exploratory analysis shows consistent client-level differences (approximately 2�
 
 The FL evaluation includes both FedAvg and Personalized FL. We predict that FedAvg will exhibit systematic bias on extreme clients, while personalization will reduce this gap and approach centralized performance.
 
+## D-014 — Weather features: lagged-observed vs perfect-forecast
+
+**Status:** ✅ Decided (2026-07-30)
+
+### Decision
+
+The builder produces two sets of weather features:
+
+- **`weather_past_*`**: observed weather at the forecast origin (**T−24**). These values would be available when making the prediction.
+- **`weather_future_*`**: weather at the target time (**T**). These represent a **perfect forecast** and would not be available in a real deployment.
+
+### Rationale
+
+Both feature sets are generated, and each model variant chooses which one to use.
+
+- **Lagged-only weather** provides a realistic baseline.
+- **Perfect-forecast weather** provides an optimistic upper bound, allowing us to isolate whether the weather→power relationship transfers across clients under FedAvg without forecast error.
+
+### Trade-offs
+
+- Results using **`weather_future_*`** assume perfect knowledge of future weather and therefore cannot be deployed in practice.
+- Real day-ahead weather forecasts (e.g., Open-Meteo) include forecast errors and are not used in this project.
+
+### Consequence
+
+All results using **`weather_future_*`** are explicitly labelled as **perfect-forecast** and interpreted as an upper bound. They are not directly comparable to a real-world forecasting system.
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it
