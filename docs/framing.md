@@ -241,12 +241,35 @@ Use a **24-hour (day-ahead)** forecast horizon. All historical (lag) features mu
 ### Trade-offs
 
 - Higher forecast errors compared to short-horizon forecasting.
-- Lag-24 features are unavailable for some samples due to ~21% inter-day missingness.
-- Weather and solar geometry features are unaffected and remain available for all samples.
+- Lag-24 features require a complete hourly time index. After reindexing, approximately
+  96–98% of samples have a valid lag-24 feature; the remaining missing values arise
+  primarily from inter-day gaps and quality filtering (e.g., invalid capacity factors).
+- Weather and solar geometry features remain available for all samples.
 
 ### Consequence
 
 The project evaluates whether Federated Learning can learn a **shared weather-to-production mapping**, rather than simply matching a strong persistence baseline.
+
+## D-013 — Evaluate FedAvg and Personalized FL
+
+**Status:** ✅ Decided (2026-07-30)
+
+### Decision
+
+Evaluate both **FedAvg** and a **personalized Federated Learning** variant against a centralized baseline.
+
+### Rationale
+
+Exploratory analysis shows consistent client-level differences (approximately 2× spread in capacity factor) while the irradiance response curves remain approximately parallel. This suggests a shared weather-to-power relationship with client-specific offsets rather than different underlying physics. A personalized FL approach is therefore expected to better capture client heterogeneity than a single global FedAvg model.
+
+### Trade-offs
+
+- Requires implementing and evaluating a second FL method.
+- Personalization strategy (e.g., which layers remain local) must be defined.
+
+### Consequence
+
+The FL evaluation includes both FedAvg and Personalized FL. We predict that FedAvg will exhibit systematic bias on extreme clients, while personalization will reduce this gap and approach centralized performance.
 
 ## 4. Open — blocking
 
