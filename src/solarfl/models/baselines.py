@@ -27,7 +27,7 @@ from solarfl.labels.capacity import station_labels
 from solarfl.models.mlp import fit_mlp
 
 SEED = 0
-RESULTS_PATH = ROOT / "data/results/baselines_val.csv"
+RESULTS_PATH = ROOT / "results/baselines_val.csv"
 
 VARIANTS = {
     "past": [c for c in MODEL_MATRIX if not c.startswith("weather_future_")],

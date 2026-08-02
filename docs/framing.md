@@ -298,6 +298,280 @@ Both feature sets are generated, and each model variant chooses which one to use
 
 All results using **`weather_future_*`** are explicitly labelled as **perfect-forecast** and interpreted as an upper bound. They are not directly comparable to a real-world forecasting system.
 
+## D-015 — Evaluation is daylight-only
+
+**Status:** ✅ Decided (2026-08-02)
+
+### Decision
+
+Model training and all reported metrics cover **daylight hours only**. Night rows
+are excluded from the model matrix as a consequence of `kt` being undefined when
+top-of-atmosphere radiation ≤ 10 W/m² (D-008 guard), combined with the
+`dropna(subset=MODEL_MATRIX + ["capacity_factor"])` in `build_features`.
+
+Rows are additionally required to have **all** feature columns present, including
+`weather_future_*`. The `past` and `perfect` variants are therefore scored on an
+identical row set.
+
+### Evidence
+
+`src/solarfl/data/features.py`, measured 2026-08-02:
+
+| client | raw rows | daylight | in model matrix | matrix/daylight |
+| ------ | -------- | -------- | --------------- | --------------- |
+| S1     | 2470     | 1453     | 1392            | 0.958           |
+| S2     | 1627     | 1453     | 1392            | 0.958           |
+| S3     | 1789     | 1604     | 1549            | 0.966           |
+| S4     | 1769     | 1601     | 1548            | 0.967           |
+| S5     | 1770     | 1601     | 1548            | 0.967           |
+| S6     | 1759     | 1588     | 1536            | 0.967           |
+| S7     | 6799     | 4098     | 3907            | 0.953           |
+
+- Total: 17,983 raw → 13,398 daylight (74.5%) → 12,872 in matrix (71.6% of raw).
+- The 95.3–96.7% matrix/daylight retention is the lag-24 availability rate, and
+  independently confirms the 96–98% figure asserted in D-012.
+- Persistence MAE is identical across the `past` and `perfect` variants for every
+  client in `data/results/baselines_val.csv`, confirming the two variants share a
+  row set.
+
+### Rejected
+
+Imputing `kt = 0` at night plus a night indicator, which would retain all 17,983
+rows.
+
+### Rationale
+
+<!-- YOURS. Prompts:
+  - What is the capacity factor at night, and what would including those rows do
+    to a reported MAE? Roughly what fraction of rows are they?
+  - Would a model that predicts night correctly have demonstrated anything?
+  - Who is harmed by the omission — i.e. what real use case needs night hours?
+-->
+
+### Consequence
+
+<!-- YOURS. Prompt: how must every metric in this project be labelled from now
+     on, and what comparison would become invalid if a future result silently
+     included night hours? -->
+
+---
+
+## D-016 — Lag features computed on the full timeline, split filter applied afterwards
+
+**Status:** ✅ Decided (2026-08-02)
+
+### Decision
+
+`build_features(station_id, split=...)` computes `history_capacity_factor` and
+`weather_past_*` against the client's **entire** timeline, then filters rows down
+to the requested split. A val or test row therefore retains a T−24 value that may
+originate from a row belonging to an earlier split.
+
+Split boundaries are read from `configs/splits.json` and the resulting row counts
+are verified against the manifest, raising on mismatch.
+
+### Evidence
+
+- `_split_mask` and the ordering of operations in
+  `src/solarfl/data/features.py`.
+- Half-open interval convention matches `splits._assign`:
+  `[.., train_end) [train_end, val_end) [val_end, ..]`.
+- Manifest verification is enforced twice: total row count against `n_total`, and
+  per-split selected count against `counts[split]`.
+
+### Rejected
+
+Filtering to the split first, then computing lags within it. This would blank the
+first 24 hours of every split.
+
+### Rationale
+
+<!-- YOURS. The key question an interviewer will ask: "isn't a val row reading a
+     train row leakage?" Prompts:
+  - At the moment you forecast time T, is the value at T−24 known or unknown?
+  - Does it matter which split T−24 was administratively assigned to?
+  - What IS the thing leakage prohibits — using data from the past, or using
+    data from the future relative to the forecast origin?
+  - Separately: why does the scaler (mu/sigma in mlp.py) NOT get this same
+    latitude? What's different about it?
+-->
+
+### Consequence
+
+<!-- YOURS. Prompt: what does the manifest count check buy you, given the
+     "never delete rows" invariant? What failure does it catch? -->
+
+---
+
+## D-017 — Predictions clipped to the physical range [0, 1]
+
+**Status:** ✅ Decided (2026-08-02)
+
+### Decision
+
+All model predictions are clipped to `[0, 1]` before any metric is computed
+(`_clip` in `src/solarfl/models/baselines.py`). Persistence is not clipped, as it
+is already a realised capacity factor and bounded by construction (D-010).
+
+### Evidence
+
+The clip is not cosmetic — it binds frequently on the linear model:
+
+| model | variant | predictions below 0 | rate  |
+| ----- | ------- | ------------------- | ----- |
+| ridge | past    | 117 / 2059          | 5.7%  |
+| ridge | perfect | 253 / 2059          | 12.3% |
+
+### Rejected
+
+Leaving predictions unclipped.
+
+### Rationale
+
+<!-- YOURS. Prompts:
+  - Ridge has no way to know CF ≥ 0. Is clipping supplying information the model
+    lacked, or correcting an output the domain already forbids?
+  - Which model family benefits more from the clip, and does that make the
+    ridge-vs-MLP comparison more or less fair? (Note the 12.3% figure.)
+  - Would you defend clipping if you were reporting ONLY ridge?
+-->
+
+### Consequence
+
+<!-- YOURS. Prompt: does this flatter ridge relative to the MLP, and how should
+     that be disclosed alongside the ridge-vs-MLP comparison? -->
+
+---
+
+## D-018 — One shared MLP architecture across every training regime
+
+**Status:** ✅ Decided (2026-08-02)
+
+### Decision
+
+Local, centralized, and (forthcoming) federated runs all use the same model class:
+`MLP(hidden=(64, 32))`, ReLU, Adam at lr 1e-3, MSE loss, batch size 256, early
+stopping on validation MAE with patience 25 and best-weight restore, seed 0.
+Implemented in PyTorch (`src/solarfl/models/mlp.py`).
+
+Feature standardisation (`mu`, `sigma`) is fitted on the **train split only** and
+is carried with the fitted model in `FittedMLP`.
+
+### Evidence
+
+- `src/solarfl/models/mlp.py`.
+- Run-to-run and machine-to-machine reproducibility confirmed: the results table
+  in `data/results/baselines_val.csv` reproduced bit-for-bit on 2026-08-02.
+
+### Rejected
+
+`sklearn.neural_network.MLPRegressor` — no accessible `state_dict`, which FedAvg
+requires for weight averaging.
+
+### Open / not yet decided
+
+Hyperparameters are **untuned defaults**, not search results. Capacity is held
+fixed at (64, 32) even though the centralized model sees ~7× the training data of
+any local model — this is an acknowledged confound in the local-vs-centralized
+comparison and is not yet resolved.
+
+### Rationale
+
+<!-- YOURS. Prompts:
+  - If centralized used a bigger network than local, what would a
+    "centralized wins" result actually prove?
+  - Why does the standardiser have to travel inside FittedMLP rather than being
+    recomputed at predict time?
+  - Why does the centralized model early-stop on POOLED val rather than each
+    client's own val? What would per-client stopping quietly grant it?
+-->
+
+### Consequence
+
+<!-- YOURS. Prompt: what must stay frozen for the FedAvg numbers to be
+     comparable to these baselines? -->
+
+---
+
+## D-019 — Skill score defined on MAE against same-hour-yesterday persistence
+
+**Status:** ✅ Decided (2026-08-02)
+
+### Decision
+
+`skill = 1 − MAE(model) / MAE(persistence)`, where persistence is the
+`history_capacity_factor` feature (the realised capacity factor at T−24).
+Positive skill beats persistence; persistence scores exactly 0 by construction.
+MAE and RMSE are both reported, but skill is computed on MAE only.
+
+### Evidence
+
+`src/solarfl/eval/metrics.py`. RMSE/MAE ratio by model (val, 2026-08-02):
+
+- persistence: 1.46 – 1.63 (highest in almost every client row)
+- fitted models: 1.27 – 1.61
+
+Persistence has visibly fatter error tails. Defining skill on RMSE instead would
+raise every model's score — e.g. S1 MLP-local rises from 0.153 to 0.228.
+
+### Rationale
+
+<!-- YOURS. Prompts:
+  - Raw MAE for S1 (44 kW) and S7 (1300 kW) — why can't you compare those two
+    numbers directly, and what does normalising by persistence fix?
+  - RMSE-skill would make your models look better. Why is choosing the metric
+    that flatters you less the defensible move here?
+  - What kind of event produces a single huge persistence error at H=24, and why
+    shouldn't one such hour dominate the ratio?
+-->
+
+### Consequence
+
+<!-- YOURS. Prompt: the project invariant says no result is meaningful without a
+     persistence comparison. What does a NEGATIVE skill score oblige you to
+     report rather than quietly drop? (See the ridge/`past` result.) -->
+
+---
+
+## D-020 — Model selection on validation; test split untouched until protocol freeze
+
+**Status:** ✅ Decided (2026-08-02)
+
+### Decision
+
+All results reported to date — `data/results/baselines_val.csv` — are computed on
+the **validation** split. The test split has not been read by any model or metric.
+Early stopping, and any future hyperparameter tuning, select on val.
+
+### Evidence
+
+`_load_all` in `src/solarfl/models/baselines.py` loads only `train` and `val`.
+
+### Known limitation
+
+Validation sets are small: 229–593 daylight rows per client (2,059 total). Because
+adjacent hours are correlated, the effective sample size is closer to the number
+of distinct days (~25 per client) than to the row count. An approximate paired
+standard error on a per-client MAE difference is therefore ~0.006–0.008, meaning
+**no individual local-vs-centralized gap in the current results is statistically
+conclusive.** The MLP `past` finding rests on the consistency of its sign
+(6/7 clients, median gap −0.0123), not on any single client's margin.
+
+### Rationale
+
+<!-- YOURS. Prompts:
+  - Early stopping reads val every epoch. In what sense is val therefore already
+    "used up", and what does that imply about reporting a final number on it?
+  - Given the noise floor above, what claim are you entitled to make from the
+    current table, and what claim would be overreach?
+-->
+
+### Consequence
+
+<!-- YOURS. Prompt: what specifically must be frozen at the protocol-freeze line
+     (section 6) before the test split is read, and how many times may it be
+     read? -->
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it

@@ -102,6 +102,147 @@ The fraction of its theoretical maximum that a station actually produced.
 
 > Formula: Actual Energy Produced / (Rated Power \* Time Period)
 
+## 10. Baseline Models ⭐⭐⭐⭐⭐
+
+### Core Idea
+
+Every ML project starts with a **simple baseline**.
+
+The purpose is to answer:
+
+> "Is my model actually better than a simple solution?"
+
+### Examples
+
+| Problem                 | Baseline                    |
+| ----------------------- | --------------------------- |
+| Regression              | Predict the mean            |
+| Classification          | Predict the majority class  |
+| Time Series Forecasting | Persistence                 |
+
+### Example
+
+PV Forecasting:
+
+```text
+Current Production = 120 kWh
+Persistence Prediction (Next Hour) = 120 kWh
+```
+
+Without a baseline, model performance has no context.
+
+---
+
+## 11. Skill Score ⭐⭐⭐⭐⭐
+
+### Core Idea
+
+Measures how much better your model is than the baseline.
+
+Formula:
+
+```text
+Skill = 1 - MAE_model / MAE_baseline
+```
+
+Interpretation:
+
+| Skill | Meaning              |
+| ----- | -------------------- |
+| < 0   | Worse than baseline  |
+| 0     | Same as baseline     |
+| 0.15  | 15% better           |
+| 0.30  | 30% better           |
+| 1.0   | Perfect prediction   |
+
+### Lesson
+
+Never ask:
+
+> "Is MAE = 0.1 good?"
+
+Instead ask:
+
+> "How much better is my model than the baseline?"
+
+---
+
+## 12. Oracle / Upper Bound ⭐⭐⭐⭐⭐
+
+### Core Idea
+
+Determine the **best possible performance** under ideal conditions.
+
+Example:
+
+| Setup                    | Skill |
+| ------------------------ | ----- |
+| Past weather             | 0.157 |
+| Perfect weather (oracle) | 0.286 |
+
+Meaning:
+
+Your model has already achieved
+
+```text
+0.157 / 0.286 ≈ 55%
+```
+
+of the maximum possible improvement.
+
+### Lesson
+
+The oracle tells you whether improving the model is worthwhile.
+
+---
+
+## 13. Bottleneck Analysis ⭐⭐⭐⭐⭐
+
+### Core Idea
+
+Instead of asking
+
+> "How do I improve the model?"
+
+Ask
+
+> "What is actually limiting performance?"
+
+Possible bottlenecks:
+
+- Poor features
+- Low-quality labels
+- Bad weather forecasts
+- Insufficient data
+- Model capacity
+- Optimization
+
+### Lesson
+
+Find the bottleneck before improving the model.
+
+---
+
+## 14. Error Analysis ⭐⭐⭐⭐⭐
+
+### Core Idea
+
+Don't just compute one number.
+
+Investigate:
+
+- Where does the model fail?
+- Which stations?
+- Which seasons?
+- Which weather conditions?
+- Sunrise?
+- Sunset?
+- Cloudy days?
+
+### Lesson
+
+Most model improvements come from understanding failures.
+
 ---
 
 ### DK-003 :- Interpretation of `terrestrial_radiation`
