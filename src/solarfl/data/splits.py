@@ -26,7 +26,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[3]
 
 CLIENTS_DIR = ROOT / "data/processed/client"
-SPLITS_PATH = ROOT / "data/processed/splits.json"
+SPLITS_PATH = ROOT / "configs/splits.json"
 RAW_FACT = ROOT / "data/raw"
 
 TRAIN_FRAC = 0.70
