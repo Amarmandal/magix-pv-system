@@ -341,12 +341,9 @@ rows.
 
 ### Rationale
 
-<!-- YOURS. Prompts:
-  - What is the capacity factor at night, and what would including those rows do
-    to a reported MAE? Roughly what fraction of rows are they?
-  - Would a model that predicts night correctly have demonstrated anything?
-  - Who is harmed by the omission — i.e. what real use case needs night hours?
--->
+- Keeping the night hour rows is not sensible because predicting night does not demonstrate forecast ability
+- It will just make the metrics look artificially better
+- Also, forecasting the Night time production is trivial (Night -> 0)
 
 ### Consequence
 
@@ -362,9 +359,9 @@ rows.
 
 ### Decision
 
-`build_features(station_id, split=...)` computes `history_capacity_factor` and
-`weather_past_*` against the client's **entire** timeline, then filters rows down
-to the requested split. A val or test row therefore retains a T−24 value that may
+`build_features(station_id, split=...)` computes `history_capacity_factor` and  
+`weather_past_*` against the client's **entire** timeline, then filters rows down  
+to the requested split. A val or test row therefore retains a T−24 value that may  
 originate from a row belonging to an earlier split.
 
 Split boundaries are read from `configs/splits.json` and the resulting row counts
