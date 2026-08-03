@@ -1,0 +1,15 @@
+client,variant,model,regime,n_val,mae,rmse,skill
+S1,past,mlp,fedavg,247,0.1007,0.1392,-0.0887
+S2,past,mlp,fedavg,229,0.1219,0.1769,0.0765
+S3,past,mlp,fedavg,246,0.1057,0.1497,-0.0807
+S4,past,mlp,fedavg,248,0.127,0.1814,0.1216
+S5,past,mlp,fedavg,248,0.11,0.1581,0.0418
+S6,past,mlp,fedavg,248,0.1047,0.1541,0.0512
+S7,past,mlp,fedavg,593,0.1643,0.2193,-0.0758
+S1,perfect,mlp,fedavg,247,0.0738,0.1066,0.2021
+S2,perfect,mlp,fedavg,229,0.0934,0.1387,0.292
+S3,perfect,mlp,fedavg,246,0.0776,0.1144,0.2061
+S4,perfect,mlp,fedavg,248,0.1193,0.1763,0.1753
+S5,perfect,mlp,fedavg,248,0.0966,0.1451,0.1588
+S6,perfect,mlp,fedavg,248,0.0931,0.1445,0.1563
+S7,perfect,mlp,fedavg,593,0.1331,0.1798,0.1287
