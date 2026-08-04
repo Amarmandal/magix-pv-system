@@ -1,6 +1,6 @@
 # P0 — Framing & Decision Log
 
-Last updated: 2026-07-25
+Last updated: 2026-08-04
 
 ## 1. Problem
 
@@ -568,6 +568,154 @@ conclusive.** The MLP `past` finding rests on the consistency of its sign
 <!-- YOURS. Prompt: what specifically must be frozen at the protocol-freeze line
      (section 6) before the test split is read, and how many times may it be
      read? -->
+
+---
+
+## D-021 — Hand-Rolled FedAvg Instead of Flower
+
+**Status:** ✅ Decided (2026-08-04)
+
+### Decision
+
+FedAvg was implemented directly in `fedavg.py` rather than using a federated learning framework such as Flower.
+
+The implementation explicitly performs the standard FedAvg round:
+
+1. Broadcast the current global model to all clients.
+2. Train each client locally.
+3. Collect the updated model parameters (`state_dict`).
+4. Aggregate the client models using sample-count-weighted averaging.
+5. Evaluate the aggregated model on the pooled validation set.
+6. Apply early stopping and restore the best-performing model.
+
+### Rationale
+
+A hand-written implementation provides complete control over every stage of the algorithm and makes the implementation directly comparable with the existing centralized training loop.
+
+Using Flower would introduce additional abstractions (client processes, communication APIs, server strategies) that are unnecessary for an offline simulation where all client datasets are already available locally. Since the goal of this study is algorithmic comparison rather than distributed deployment, a minimal implementation improves transparency and reproducibility.
+
+### Consequences
+
+#### Advantages
+
+- Every optimization step is visible and easy to inspect.
+- Training is directly comparable with the centralized baseline.
+- Easier experimentation with aggregation strategies, stopping criteria, and optimizer behavior.
+- Minimal implementation complexity.
+
+#### Limitations
+
+- Does not model real network communication.
+- Does not support heterogeneous client availability or asynchronous updates.
+- Not directly deployable as a production federated learning system.
+
+---
+
+## D-022 — Global Feature Scaling Using Aggregate Statistics
+
+**Status:** ✅ Decided (2026-08-04)
+
+### Decision
+
+Reconstruct a global feature scaler using per-client aggregate statistics (`sum`, `sum_sq`, and `count`) rather than fitting the scaler on centrally collected data.
+
+Each client shares only:
+
+- feature sums
+- feature squared sums
+- sample counts
+
+The server reconstructs the **global mean** and **standard deviation** from these aggregates and distributes the resulting normalization parameters to all clients.
+
+### Rationale
+
+This approach produces exactly the same normalization parameters as centralized preprocessing while ensuring that raw feature vectors never leave the client boundary.
+
+Using a common global scaler isolates the effect of federated optimization from differences in preprocessing. Consequently, any performance differences between FedAvg and the centralized MLP arise from the training procedure rather than inconsistent feature normalization.
+
+### Consequences
+
+#### Advantages
+
+- Identical preprocessing to the centralized baseline.
+- No raw training samples are transmitted.
+- Communication cost is extremely small.
+- Fair comparison between centralized and federated training.
+
+#### Limitations
+
+Although substantially more privacy-preserving than sharing raw data, aggregate statistics still cross the client boundary and therefore represent a small relaxation compared with a fully local preprocessing pipeline.
+
+---
+
+## D-023 — FedAvg Configuration
+
+**Status:** ✅ Decided (2026-08-04)
+
+### Decision
+
+The following configuration was adopted:
+
+- Full client participation every communication round.
+- One local epoch per communication round (`local_epochs = 1`).
+- Adam optimizer recreated independently for every client and every communication round.
+- **Sample-count-weighted** model aggregation.
+- Early stopping using pooled validation MAE with patience measured in communication rounds.
+
+### Rationale
+
+Using one local epoch per round makes each communication round perform approximately the same amount of gradient computation as one centralized training epoch. This enables direct comparison of training budgets between centralized and federated learning.
+
+Recreating the Adam optimizer each round treats clients as stateless, preventing optimizer moments from becoming inconsistent after the server replaces model parameters with the aggregated global model.
+
+Sample-count weighting follows the original FedAvg algorithm and gives larger datasets proportionally greater influence on the global model.
+
+Monitoring pooled validation MAE mirrors the centralized baseline (D-018), ensuring identical model-selection criteria.
+
+### Consequences
+
+#### Advantages
+
+- Fair comparison with centralized training.
+- Configuration closely follows the original FedAvg algorithm.
+- Minimal implementation complexity.
+- Easy to reproduce.
+
+#### Limitations
+
+Several common federated learning variants remain unexplored:
+
+- Multiple local epochs (`E > 1`)
+- Partial client participation
+- Uniform client weighting
+- Alternative aggregation methods
+- Client-specific validation or decentralized stopping criteria
+
+These remain possible directions for future work.
+
+---
+
+## D-024 — Interpretation of FedAvg Results
+
+**Status:** ✅ Decided (2026-08-04)
+
+### Context
+
+FedAvg was evaluated against the centralized MLP, local MLP, and persistence baselines using the same validation protocol.
+
+### Decision
+
+FedAvg is retained as the representative federated baseline but is **not** adopted as the preferred predictive model.
+
+### Rationale
+
+FedAvg consistently performs close to, but slightly worse than, the centralized MLP, while the local MLP achieves the best performance on most clients. This suggests that client-specific characteristics are better captured through personalization than by a single shared global model.
+
+### Consequence
+
+The remainder of the analysis emphasizes the value of personalization while using FedAvg as the federated reference implementation for comparison.
+
+---
 
 ## 4. Open — blocking
 
