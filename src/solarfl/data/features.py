@@ -11,29 +11,63 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from solarfl.labels.capacity import add_capacity_factor, station_labels
 
 ROOT = Path(__file__).resolve().parents[3]
 CLIENTS_DIR = ROOT / "data/processed/client"
 SPLITS_PATH = ROOT / "configs/splits.json"  # the frozen manifest (hand-maintained, D-003)
+SPEC_PATH = ROOT / "configs/features.yaml"  # the spec, not a suggestion
 
 LAG = pd.Timedelta(hours=24)  # H = 24 (D-012) -- every lag feature must use lag >= 24
 
-WEATHER_COLS = [
-    "temperature_2m",
-    "direct_radiation",
-    "diffuse_radiation",
-    "global_tilted_irradiance",
-    "kt",
-]
+# The model_matrix groups this builder knows how to materialise, mapped to the
+# prefix each group's columns carry in X. Iteration order fixes column order in
+# X, so it must stay stable -- a fitted model indexes by position.
+_GROUP_PREFIX = {
+    "history": "history_",
+    "geometry": "",
+    "weather_past": "weather_past_",
+    "weather_future": "weather_future_",
+}
 
-MODEL_MATRIX = (
-    ["history_capacity_factor"]
-    + ["cos_zenith", "hour_sin", "hour_cos", "doy_sin", "doy_cos", "is_daylight"]
-    + [f"weather_past_{c}" for c in WEATHER_COLS]
-    + [f"weather_future_{c}" for c in WEATHER_COLS]
-)
+
+def _load_matrix(groups: dict[str, list[str]]) -> list[str]:
+    """Flatten the yaml's model_matrix groups into prefixed column names.
+
+    An unknown group is an error rather than a no-op: silently ignoring a group
+    someone added to the yaml is exactly the spec/code drift that reading the
+    yaml is meant to prevent.
+    """
+    unknown = sorted(set(groups) - set(_GROUP_PREFIX))
+    if unknown:
+        raise ValueError(
+            f"configs/features.yaml declares model_matrix group(s) {unknown}, "
+            f"which this builder cannot construct. Known groups: "
+            f"{sorted(_GROUP_PREFIX)}."
+        )
+    return [
+        f"{prefix}{col}"
+        for group, prefix in _GROUP_PREFIX.items()
+        for col in groups.get(group, [])
+    ]
+
+
+# features.yaml is the spec (CLAUDE.md), so the column set is read from it rather
+# than restated here -- a hardcoded copy is a second source of truth that drifts
+# silently the first time the yaml is edited.
+_SPEC = yaml.safe_load(SPEC_PATH.read_text())
+_GROUPS = _SPEC["model_matrix"]
+
+TARGET = _SPEC["target"]
+HISTORY_COLS = _GROUPS.get("history", [])
+GEOMETRY_COLS = _GROUPS.get("geometry", [])
+WEATHER_PAST_COLS = _GROUPS.get("weather_past", [])
+# kept separate from weather_past even though the two lists are identical today:
+# the yaml states them separately, and D-014 is the claim that they *could* differ
+WEATHER_FUTURE_COLS = _GROUPS.get("weather_future", [])
+MODEL_MATRIX = _load_matrix(_GROUPS)
 
 
 def _lag_lookup(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
@@ -112,16 +146,38 @@ def build_features(
     df["doy_sin"] = np.sin(2 * np.pi * doy / 365)
     df["doy_cos"] = np.cos(2 * np.pi * doy / 365)
 
-    # history: capacity_factor lag >= 24 (D-012)
-    df["history_capacity_factor"] = _lag_lookup(df, ["capacity_factor"])["capacity_factor"]
+    # Every base column the yaml names must exist by now, before we prefix any of
+    # them. Checking here rather than at selection turns "the yaml asks for a
+    # column this builder never derives" into a named error instead of a KeyError
+    # from inside a loop. Code conforms to the yaml, so this failing means the
+    # code is behind the spec.
+    base = [
+        TARGET,
+        *HISTORY_COLS,
+        *GEOMETRY_COLS,
+        *WEATHER_PAST_COLS,
+        *WEATHER_FUTURE_COLS,
+    ]
+    missing = [c for c in dict.fromkeys(base) if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{station_id}: configs/features.yaml names {missing}, which this "
+            "builder does not construct — either a derivation is missing from "
+            "build_features or the column is absent from the source CSV."
+        )
+
+    # history: lag >= 24 (D-012)
+    hist = _lag_lookup(df, HISTORY_COLS)
+    for c in HISTORY_COLS:
+        df[f"history_{c}"] = hist[c]
 
     # weather_past: observed at T-24, available at forecast time (D-014)
-    past = _lag_lookup(df, WEATHER_COLS)
-    for c in WEATHER_COLS:
+    past = _lag_lookup(df, WEATHER_PAST_COLS)
+    for c in WEATHER_PAST_COLS:
         df[f"weather_past_{c}"] = past[c]
 
     # weather_future: reanalysis at T itself -- perfect-forecast assumption (D-014)
-    for c in WEATHER_COLS:
+    for c in WEATHER_FUTURE_COLS:
         df[f"weather_future_{c}"] = df[c]
 
     # split filter comes BEFORE dropna: lag lookups were already computed on the
@@ -130,9 +186,9 @@ def build_features(
     if split is not None:
         df = df[_split_mask(df["measured_ts"], station_id, split)]
 
-    required = MODEL_MATRIX + ["capacity_factor"]
+    required = MODEL_MATRIX + [TARGET]
     df = df.dropna(subset=required)
 
     X = df[MODEL_MATRIX].reset_index(drop=True)
-    y = df["capacity_factor"].reset_index(drop=True)
+    y = df[TARGET].reset_index(drop=True)
     return X, y

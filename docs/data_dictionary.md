@@ -71,3 +71,43 @@
 - `hour_sin`, `hour_cos`: cyclic hour features derived from `measured_ts`.
 
 - `doy_sin`, `doy_cos`: cyclic day-of-year features derived from `measured_ts`.
+
+---
+
+## Model Matrix — feature counts
+
+The input matrix is specified by `model_matrix:` in `configs/features.yaml` and
+built by `build_features()` in `src/solarfl/data/features.py`, which reads that
+yaml at import. The counts below are derived from the spec, not maintained by
+hand — if they disagree with the yaml, the yaml wins.
+
+| Group            | Count | Prefix in `X`      | Available at forecast time?             |
+| ---------------- | ----- | ------------------ | --------------------------------------- |
+| `history`        | 1     | `history_`         | Yes — capacity_factor at T−24 (D-012)   |
+| `geometry`       | 6     | *(none)*           | Yes — deterministic astronomy           |
+| `weather_past`   | 5     | `weather_past_`    | Yes — ERA5 observed at T−24             |
+| `weather_future` | 5     | `weather_future_`  | **No** — ERA5 reanalysis at T itself    |
+
+### Variant A — operational (past-only): **12 features**
+
+`history` + `geometry` + `weather_past`. Every input is knowable 24 h before the
+predicted hour, so this is the only variant whose scores describe a deployable
+forecaster.
+
+### Variant B — perfect-forecast: **17 features**
+
+Variant A + `weather_future`. Adds ERA5 reanalysis for the predicted hour
+itself, which stands in for a weather forecast that would in reality carry its
+own error. Scores from this variant are an **upper bound**, not an achievable
+operational result, and must be labelled as such wherever they are reported
+(D-014).
+
+The gap between A and B is the cost of not knowing tomorrow's weather. It is
+worth reporting as a number in its own right — it separates "our model is weak"
+from "the weather input is the binding constraint".
+
+> **Implementation note.** `build_features()` currently returns the full 17-column
+> Variant B matrix only; there is no `variant=` argument yet. Variant A is
+> obtained by dropping the five `weather_future_*` columns from `X`. Both
+> variants share the same rows, since the `dropna` in `build_features` is applied
+> across all 17 columns.

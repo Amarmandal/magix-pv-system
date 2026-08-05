@@ -113,7 +113,9 @@ def _local_update(
         for idx in np.array_split(rng.permutation(len(Zt)),
                                   max(1, len(Zt) // batch_size)):
             opt.zero_grad()
+            # Local MSE
             loss = loss_fn(model(Zt[idx]), yt[idx])
+            # It means that there is no penalty; that means fedavg and fedprox behaves identically
             if prox_mu > 0.0:
                 prox = sum((p - a).pow(2).sum()
                            for p, a in zip(model.parameters(), anchor))
