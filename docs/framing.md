@@ -345,12 +345,6 @@ rows.
 - It will just make the metrics look artificially better
 - Also, forecasting the Night time production is trivial (Night -> 0)
 
-### Consequence
-
-<!-- YOURS. Prompt: how must every metric in this project be labelled from now
-     on, and what comparison would become invalid if a future result silently
-     included night hours? -->
-
 ---
 
 ## D-016 — Lag features computed on the full timeline, split filter applied afterwards
@@ -381,23 +375,6 @@ are verified against the manifest, raising on mismatch.
 Filtering to the split first, then computing lags within it. This would blank the
 first 24 hours of every split.
 
-### Rationale
-
-<!-- YOURS. The key question an interviewer will ask: "isn't a val row reading a
-     train row leakage?" Prompts:
-  - At the moment you forecast time T, is the value at T−24 known or unknown?
-  - Does it matter which split T−24 was administratively assigned to?
-  - What IS the thing leakage prohibits — using data from the past, or using
-    data from the future relative to the forecast origin?
-  - Separately: why does the scaler (mu/sigma in mlp.py) NOT get this same
-    latitude? What's different about it?
--->
-
-### Consequence
-
-<!-- YOURS. Prompt: what does the manifest count check buy you, given the
-     "never delete rows" invariant? What failure does it catch? -->
-
 ---
 
 ## D-017 — Predictions clipped to the physical range [0, 1]
@@ -418,25 +395,6 @@ The clip is not cosmetic — it binds frequently on the linear model:
 | ----- | ------- | ------------------- | ----- |
 | ridge | past    | 117 / 2059          | 5.7%  |
 | ridge | perfect | 253 / 2059          | 12.3% |
-
-### Rejected
-
-Leaving predictions unclipped.
-
-### Rationale
-
-<!-- YOURS. Prompts:
-  - Ridge has no way to know CF ≥ 0. Is clipping supplying information the model
-    lacked, or correcting an output the domain already forbids?
-  - Which model family benefits more from the clip, and does that make the
-    ridge-vs-MLP comparison more or less fair? (Note the 12.3% figure.)
-  - Would you defend clipping if you were reporting ONLY ridge?
--->
-
-### Consequence
-
-<!-- YOURS. Prompt: does this flatter ridge relative to the MLP, and how should
-     that be disclosed alongside the ridge-vs-MLP comparison? -->
 
 ---
 
@@ -472,22 +430,6 @@ fixed at (64, 32) even though the centralized model sees ~7× the training data 
 any local model — this is an acknowledged confound in the local-vs-centralized
 comparison and is not yet resolved.
 
-### Rationale
-
-<!-- YOURS. Prompts:
-  - If centralized used a bigger network than local, what would a
-    "centralized wins" result actually prove?
-  - Why does the standardiser have to travel inside FittedMLP rather than being
-    recomputed at predict time?
-  - Why does the centralized model early-stop on POOLED val rather than each
-    client's own val? What would per-client stopping quietly grant it?
--->
-
-### Consequence
-
-<!-- YOURS. Prompt: what must stay frozen for the FedAvg numbers to be
-     comparable to these baselines? -->
-
 ---
 
 ## D-019 — Skill score defined on MAE against same-hour-yesterday persistence
@@ -510,23 +452,6 @@ MAE and RMSE are both reported, but skill is computed on MAE only.
 
 Persistence has visibly fatter error tails. Defining skill on RMSE instead would
 raise every model's score — e.g. S1 MLP-local rises from 0.153 to 0.228.
-
-### Rationale
-
-<!-- YOURS. Prompts:
-  - Raw MAE for S1 (44 kW) and S7 (1300 kW) — why can't you compare those two
-    numbers directly, and what does normalising by persistence fix?
-  - RMSE-skill would make your models look better. Why is choosing the metric
-    that flatters you less the defensible move here?
-  - What kind of event produces a single huge persistence error at H=24, and why
-    shouldn't one such hour dominate the ratio?
--->
-
-### Consequence
-
-<!-- YOURS. Prompt: the project invariant says no result is meaningful without a
-     persistence comparison. What does a NEGATIVE skill score oblige you to
-     report rather than quietly drop? (See the ridge/`past` result.) -->
 
 ---
 
@@ -554,21 +479,6 @@ standard error on a per-client MAE difference is therefore ~0.006–0.008, meani
 conclusive.** The MLP `past` finding rests on the consistency of its sign
 (6/7 clients, median gap −0.0123), not on any single client's margin.
 
-### Rationale
-
-<!-- YOURS. Prompts:
-  - Early stopping reads val every epoch. In what sense is val therefore already
-    "used up", and what does that imply about reporting a final number on it?
-  - Given the noise floor above, what claim are you entitled to make from the
-    current table, and what claim would be overreach?
--->
-
-### Consequence
-
-<!-- YOURS. Prompt: what specifically must be frozen at the protocol-freeze line
-     (section 6) before the test split is read, and how many times may it be
-     read? -->
-
 ---
 
 ## D-021 — Hand-Rolled FedAvg Instead of Flower
@@ -593,8 +503,6 @@ The implementation explicitly performs the standard FedAvg round:
 A hand-written implementation provides complete control over every stage of the algorithm and makes the implementation directly comparable with the existing centralized training loop.
 
 Using Flower would introduce additional abstractions (client processes, communication APIs, server strategies) that are unnecessary for an offline simulation where all client datasets are already available locally. Since the goal of this study is algorithmic comparison rather than distributed deployment, a minimal implementation improves transparency and reproducibility.
-
-### Consequences
 
 #### Advantages
 
@@ -632,8 +540,6 @@ The server reconstructs the **global mean** and **standard deviation** from thes
 This approach produces exactly the same normalization parameters as centralized preprocessing while ensuring that raw feature vectors never leave the client boundary.
 
 Using a common global scaler isolates the effect of federated optimization from differences in preprocessing. Consequently, any performance differences between FedAvg and the centralized MLP arise from the training procedure rather than inconsistent feature normalization.
-
-### Consequences
 
 #### Advantages
 
@@ -714,6 +620,102 @@ FedAvg consistently performs close to, but slightly worse than, the centralized 
 ### Consequence
 
 The remainder of the analysis emphasizes the value of personalization while using FedAvg as the federated reference implementation for comparison.
+
+## D-025 — Hyperparameter Selection Protocol for FedProx
+
+## Context
+
+FedProx introduces a new hyperparameter, **μ (proximal coefficient)**, which controls the strength of the proximal regularization term. Unlike FedAvg, which has no equivalent parameter, FedProx requires selecting an appropriate μ before evaluation.
+
+The implementation evaluates four candidate values:
+
+```text
+μ ∈ {0.001, 0.01, 0.1, 1.0}
+```
+
+The value with the lowest pooled validation MAE is selected.
+
+---
+
+## Decision
+
+FedProx uses a grid search over the predefined μ values and selects the configuration that minimizes pooled validation MAE.
+
+The selected model is then used for reporting validation performance.
+
+---
+
+## Rationale
+
+The original FedProx paper recommends tuning μ because the optimal regularization strength depends on the degree of statistical heterogeneity between clients.
+
+Using a fixed μ without tuning would make the evaluation dependent on an arbitrary implementation choice.
+
+---
+
+## Consequences
+
+This protocol introduces an important limitation.
+
+Unlike FedAvg, which is evaluated once, FedProx is evaluated four times and the best-performing configuration is selected on the same validation data that is later reported.
+
+Consequently, FedProx benefits from model selection while FedAvg does not.
+
+Given that previous experiments (D-020) established a validation noise floor of approximately **0.006–0.008 MAE**, and the observed improvements are of similar or smaller magnitude, the reported gains should be interpreted as exploratory rather than definitive evidence that FedProx outperforms FedAvg.
+
+A cleaner protocol would reserve an independent validation set for hyperparameter tuning and evaluate the selected μ on unseen data.
+
+---
+
+## Alternatives Considered
+
+- **Fix μ without tuning** — Rejected because the choice becomes arbitrary.
+- **Nested validation** — Preferred statistically, but not adopted due to dataset size and project scope.
+
+## D-026 — Selection of FedProx as the Federated Learning Extension
+
+## Context
+
+Earlier planning (D-013) proposed evaluating a personalized federated learning method alongside FedAvg, motivated by large performance differences between individual photovoltaic stations.
+
+During implementation, FedProx was selected instead.
+
+---
+
+## Decision
+
+FedProx was implemented as the second federated learning algorithm in place of a personalized federated learning approach.
+
+---
+
+## Rationale
+
+FedProx is a widely used extension of FedAvg that directly addresses statistical heterogeneity through a proximal regularization term while preserving the same server aggregation procedure.
+
+Its implementation requires only a modification of the client's local objective function, allowing direct comparison with the existing FedAvg baseline while minimizing changes to the experimental pipeline.
+
+---
+
+## Consequences
+
+FedProx is **not** a personalized federated learning algorithm.
+
+All clients continue to share a single global model after every communication round.
+
+Therefore, FedProx cannot be expected to specialize models for individual photovoltaic stations.
+
+This distinction is important because earlier experiments showed that independently trained local models outperform global federated models for several highly heterogeneous stations.
+
+Consequently, FedProx should be interpreted as a robustness improvement over FedAvg rather than as a solution to personalization.
+
+Future work should evaluate genuinely personalized federated learning methods such as **FedPer**, **FedBN**, or **client-specific fine-tuning**.
+
+---
+
+## Alternatives Considered
+
+- **Personalized federated learning methods (FedPer, FedBN, client-specific fine-tuning)** — Deferred due to project scope and implementation complexity.
+- **FedAvg only** — Rejected because the objective of this phase was to investigate an approach that explicitly addresses client heterogeneity.
 
 ---
 
