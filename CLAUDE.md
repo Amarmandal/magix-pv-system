@@ -42,7 +42,7 @@ interview. Optimise for my understanding, not for finishing fast.
 ## Decision log
 
 Every non-obvious choice gets an entry in `docs/framing.md` as `D-0xx`, with
-status, date, rationale, and what was ruled out. Highest so far: D-012.
+status, date, rationale, and what was ruled out. Highest so far: D-026.
 
 When you make a judgment call, tell me it needs a D-entry. Don't write the entry
 yourself — writing it is how I confirm I understood the choice.
@@ -62,8 +62,8 @@ Notebooks decide; modules execute. Anything that runs more than once belongs in
 
 - **capacity_factor** — the target. Hourly kWh / station rated kW. NaN where > 1.0.
 - **client** — one PV station. 7 total, labelled S1–S7 in `station_labels.json`.
-- **kt** — clearness index. Fraction of top-of-atmosphere sunlight that reached
-  the ground. Clear sky ≈ 0.75, heavy cloud ≈ 0.15.
+- **kt** — clearness index. Ratio of surface shortwave irradiance to
+  top-of-atmosphere irradiance. Clear sky ≈ 0.75, heavy cloud ≈ 0.15.
 - **cos_zenith** — solar geometry, derived from `terrestrial_radiation` (D-008).
 
 ## Gotchas

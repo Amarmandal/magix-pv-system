@@ -1,6 +1,6 @@
 # P0 — Framing & Decision Log
 
-Last updated: 2026-08-04
+Last updated: 2026-08-20
 
 ## 1. Problem
 
@@ -46,7 +46,7 @@ construction.
 
 ### D-004 :- Task Family = h-ahead forecasting
 
-**Status:** Decided . horizon H deferred
+**Status:** Decided; horizon subsequently fixed at H = 24 by D-012
 
 **Evidence:**
 
@@ -64,10 +64,16 @@ A variance audit was performed to identify features that remain constant within 
 
 - `station_hash_id` and `source` were found to vary **only across clients**, not within clients. These features encode client identity rather than the underlying physical relationship between weather variables and power generation. Retaining them would allow the model to memorize station-specific behaviour instead of learning patterns that generalize to unseen stations.
 
-Because the experimental protocol evaluates generalization using Leave-One-Source-Out (LOSO), retaining client identifiers would introduce information leakage and compromise the validity of the evaluation. Therefore, these features are intentionally removed as a methodological design decision rather than a preprocessing convenience.
+Because the project aims to learn a client-invariant weather-to-production
+relationship, retaining client identifiers would let a pooled model memorize
+station-specific offsets. Therefore, these features are intentionally removed
+as a methodological design decision rather than a preprocessing convenience.
 
 **Rationale:**
-The objective of the study is to evaluate whether Federated Learning can generalize to previously unseen clients. Feature selection should therefore preserve only predictive variables that represent the underlying forecasting problem and exclude features that either:
+The objective of the study is to evaluate whether Federated Learning can learn
+a shared relationship across clients without pooling their rows. Feature
+selection should therefore preserve variables that represent the forecasting
+problem and exclude variables that either:
 
 1. provide no information (`tilt`, `azimuth`), or
 2. reveal client identity (`station_hash_id`, `source`).
@@ -250,9 +256,9 @@ Use a **24-hour (day-ahead)** forecast horizon. All historical (lag) features mu
 
 The project evaluates whether Federated Learning can learn a **shared weather-to-production mapping**, rather than simply matching a strong persistence baseline.
 
-## D-013 — Evaluate FedAvg and Personalized FL
+## D-013 — Evaluate FedAvg and Personalized FL (superseded in part)
 
-**Status:** ✅ Decided (2026-07-30)
+**Status:** ⚠️ FedAvg completed; personalized FL superseded by D-026 (2026-08-04)
 
 ### Decision
 
@@ -269,7 +275,10 @@ Exploratory analysis shows consistent client-level differences (approximately 2�
 
 ### Consequence
 
-The FL evaluation includes both FedAvg and Personalized FL. We predict that FedAvg will exhibit systematic bias on extreme clients, while personalization will reduce this gap and approach centralized performance.
+FedAvg was evaluated. The planned personalized method was not implemented;
+FedProx was selected as the second federated algorithm in D-026. FedProx
+addresses heterogeneous optimization but still produces one shared global model,
+so it must not be described as personalized FL.
 
 ## D-014 — Weather features: lagged-observed vs perfect-forecast
 
@@ -331,7 +340,7 @@ identical row set.
 - The 95.3–96.7% matrix/daylight retention is the lag-24 availability rate, and
   independently confirms the 96–98% figure asserted in D-012.
 - Persistence MAE is identical across the `past` and `perfect` variants for every
-  client in `data/results/baselines_val.csv`, confirming the two variants share a
+  client in `results/baselines_val.csv`, confirming the two variants share a
   row set.
 
 ### Rejected
@@ -404,7 +413,7 @@ The clip is not cosmetic — it binds frequently on the linear model:
 
 ### Decision
 
-Local, centralized, and (forthcoming) federated runs all use the same model class:
+Local, centralized, FedAvg, and FedProx runs all use the same model class:
 `MLP(hidden=(64, 32))`, ReLU, Adam at lr 1e-3, MSE loss, batch size 256, early
 stopping on validation MAE with patience 25 and best-weight restore, seed 0.
 Implemented in PyTorch (`src/solarfl/models/mlp.py`).
@@ -416,7 +425,7 @@ is carried with the fitted model in `FittedMLP`.
 
 - `src/solarfl/models/mlp.py`.
 - Run-to-run and machine-to-machine reproducibility confirmed: the results table
-  in `data/results/baselines_val.csv` reproduced bit-for-bit on 2026-08-02.
+  in `results/baselines_val.csv` reproduced bit-for-bit on 2026-08-02.
 
 ### Rejected
 
@@ -461,13 +470,17 @@ raise every model's score — e.g. S1 MLP-local rises from 0.153 to 0.228.
 
 ### Decision
 
-All results reported to date — `data/results/baselines_val.csv` — are computed on
-the **validation** split. The test split has not been read by any model or metric.
-Early stopping, and any future hyperparameter tuning, select on val.
+All reported result tables — `results/baselines_val.csv`,
+`results/fedavg_val.csv`, and `results/fedprox_val.csv` — are computed on the
+**validation** split. The experiment runners load only train and validation
+features; the test split remains reserved for final evaluation. Early stopping
+and FedProx's μ selection use validation data.
 
 ### Evidence
 
-`_load_all` in `src/solarfl/models/baselines.py` loads only `train` and `val`.
+The runners in `src/solarfl/models/baselines.py`,
+`src/solarfl/federated/fedavg.py`, and `src/solarfl/federated/fedprox.py` build
+only `train` and `val` features.
 
 ### Known limitation
 
@@ -591,13 +604,15 @@ Monitoring pooled validation MAE mirrors the centralized baseline (D-018), ensur
 
 Several common federated learning variants remain unexplored:
 
-- Multiple local epochs (`E > 1`)
 - Partial client participation
 - Uniform client weighting
 - Alternative aggregation methods
 - Client-specific validation or decentralized stopping criteria
 
 These remain possible directions for future work.
+
+Multiple local epochs (`E = 5`) were subsequently explored in the FedProx
+experiment, with a like-for-like FedAvg control at the same E (D-025–D-026).
 
 ---
 
@@ -615,13 +630,21 @@ FedAvg is retained as the representative federated baseline but is **not** adopt
 
 ### Rationale
 
-FedAvg consistently performs close to, but slightly worse than, the centralized MLP, while the local MLP achieves the best performance on most clients. This suggests that client-specific characteristics are better captured through personalization than by a single shared global model.
+FedAvg consistently performs close to, but slightly worse than, the centralized
+MLP, while the local MLP achieves the best performance on most clients. This
+suggests that a single shared global model does not capture all client-specific
+characteristics. It motivates testing personalization, but the current
+experiments do not establish that personalization solves the gap.
 
 ### Consequence
 
-The remainder of the analysis emphasizes the value of personalization while using FedAvg as the federated reference implementation for comparison.
+FedAvg remains the federated reference implementation. FedProx is evaluated as
+a robustness extension for heterogeneous clients; genuinely personalized FL is
+deferred (D-026).
 
 ## D-025 — Hyperparameter Selection Protocol for FedProx
+
+**Status:** ✅ Decided and implemented (2026-08-04)
 
 ## Context
 
@@ -673,6 +696,8 @@ A cleaner protocol would reserve an independent validation set for hyperparamete
 - **Nested validation** — Preferred statistically, but not adopted due to dataset size and project scope.
 
 ## D-026 — Selection of FedProx as the Federated Learning Extension
+
+**Status:** ✅ Decided and implemented (2026-08-04)
 
 ## Context
 

@@ -1,20 +1,20 @@
 # Data Dictionary — SolarMagix
 
-**Dataset:** `hourly_pv_weather_station.csv`
+**Dataset:** `hourly_pv_weather_stations.csv`
 
 | Column                           | Type     | Description                                  | Role       |
 | -------------------------------- | -------- | -------------------------------------------- | ---------- |
 | station_hash_id                  | string   | Unique station identifier                    | Excluded   |
 | measured_ts                      | datetime | Hourly timestamp                             | Time       |
-| total_produced_energy            | float    | Energy produced during the hour              | Feature    |
+| total_produced_energy            | float    | Energy produced during the hour              | Target source |
 | source                           | int      | Data source identifier                       | Excluded   |
 | capacity_factor                  | float    | total_produced_energy / station rated kW     | **Target** |
 | temperature_2m                   | float    | Air temperature                              | Feature    |
-| shortwave_radiation              | float    | direct radiation + diffuse radiation         | Feature    |
+| shortwave_radiation              | float    | direct radiation + diffuse radiation         | Derived-feature input |
 | direct_radiation                 | float    | Direct solar radiation                       | Feature    |
 | diffuse_radiation                | float    | Diffuse solar radiation                      | Feature    |
 | global_tilted_irradiance         | float    | Tilted Irradiance (GTI)                      | Feature    |
-| terrestrial_radiation            | float    | Solar radiation because it behaves like that | Feature    |
+| terrestrial_radiation            | float    | Top-of-atmosphere solar irradiance on a horizontal surface | Derived-feature input |
 | terrestrial_radiation_instant    | float    | Instantaneous terrestrial radiation          | Unreliable |
 | global_tilted_irradiance_instant | float    | Instantaneous GTI                            | Unreliable |
 | direct_normal_irradiance_instant | float    | Instantaneous DNI                            | Unreliable |
@@ -53,7 +53,7 @@
 ## Target
 
 - capacity_factor (for regression)
-- capacity_factor (h hour ahead using historical data)
+- `capacity_factor` at T, forecast 24 hours ahead using information available at T−24
 
 ---
 

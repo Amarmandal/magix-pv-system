@@ -122,12 +122,16 @@ The purpose is to answer:
 
 ### Example
 
-PV Forecasting:
+Generic one-hour-ahead PV forecasting example:
 
 ```text
 Current Production = 120 kWh
 Persistence Prediction (Next Hour) = 120 kWh
 ```
+
+In this project the horizon is 24 hours, so persistence means predicting the
+target hour T with the realised capacity factor from the same hour yesterday
+(T−24), not using the immediately preceding hour.
 
 Without a baseline, model performance has no context.
 
