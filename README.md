@@ -1,8 +1,26 @@
 # SolarMagix — Federated PV Forecasting
 
-Research project evaluating whether federated learning can approach centralized
-training for 24-hour-ahead photovoltaic capacity-factor forecasting without
-pooling raw data from seven solar stations in North Macedonia.
+Research project evaluating federated learning for 24-hour-ahead photovoltaic
+capacity-factor forecasting across seven solar stations in North Macedonia.
+
+## Research questions
+
+**RQ1 — Primary:** Can federated learning achieve forecasting performance
+comparable to centralized training without pooling raw station observations?
+
+Here, "comparable" is a non-inferiority question: the final protocol must define
+the largest practically acceptable federated-versus-centralized performance gap
+before the test split is evaluated. The current work focuses on RQ1 using
+federated learning without a formal differential-privacy guarantee.
+
+**RQ2 — Additional direction:** How does adding differential privacy to
+federated training affect the privacy–utility trade-off under explicitly stated
+privacy budgets?
+
+Federated training avoids central collection of raw station observations, but
+the current implementation exchanges unprotected model updates and aggregate
+feature statistics. It therefore does not by itself guarantee privacy or secure
+parameter exchange.
 
 ## Experiment
 

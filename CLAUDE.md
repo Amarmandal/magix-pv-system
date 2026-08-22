@@ -1,8 +1,12 @@
 # SolarMagix — federated PV forecasting
 
 Day-ahead (H=24) capacity-factor forecasting across 7 PV stations in North
-Macedonia. Research question: can federated learning match centralized training
-without pooling raw data?
+Macedonia. Primary research question: can federated learning achieve performance
+comparable to centralized training without pooling raw station observations?
+"Comparable" is to be defined by a non-inferiority margin before test
+evaluation. The current implementation has no formal differential-privacy
+guarantee; differential privacy is an additional privacy–utility research
+direction.
 
 ## Working protocol — read this first
 
@@ -42,7 +46,7 @@ interview. Optimise for my understanding, not for finishing fast.
 ## Decision log
 
 Every non-obvious choice gets an entry in `docs/framing.md` as `D-0xx`, with
-status, date, rationale, and what was ruled out. Highest so far: D-026.
+status, date, rationale, and what was ruled out. Highest so far: D-027.
 
 When you make a judgment call, tell me it needs a D-entry. Don't write the entry
 yourself — writing it is how I confirm I understood the choice.

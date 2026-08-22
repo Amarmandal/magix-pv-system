@@ -1,10 +1,27 @@
 # P0 — Framing & Decision Log
 
-Last updated: 2026-08-20
+Last updated: 2026-08-22
 
 ## 1. Problem
 
-Can federated learning achieve performance comparable to centralized training while preserving the privacy of each solar station's data?
+### RQ1 — Primary
+
+Can federated learning achieve forecasting performance comparable to
+centralized training without pooling raw station observations?
+
+"Comparable" is treated as a non-inferiority question. The practically
+acceptable performance margin and the statistical evaluation procedure must be
+fixed before the test split is evaluated.
+
+### RQ2 — Additional direction
+
+How does adding differential privacy to federated training affect the
+privacy–utility trade-off under explicitly stated privacy budgets?
+
+The current experimental focus is RQ1. Its federated implementation avoids
+central pooling of raw observations, but exchanges unprotected model updates
+and aggregate feature statistics. It therefore provides no formal differential-
+privacy guarantee and must not be described as secure parameter exchange.
 
 ## 2. Data
 
@@ -741,6 +758,59 @@ Future work should evaluate genuinely personalized federated learning methods su
 
 - **Personalized federated learning methods (FedPer, FedBN, client-specific fine-tuning)** — Deferred due to project scope and implementation complexity.
 - **FedAvg only** — Rejected because the objective of this phase was to investigate an approach that explicitly addresses client heterogeneity.
+
+---
+
+## D-027 — Research questions and privacy-claim boundary
+
+**Status:** ✅ Decided (2026-08-22)
+
+### Context
+
+The original research question combined predictive comparability with a broad
+claim about preserving station privacy. Federated learning prevents raw station
+observations from being centrally pooled, but that property alone is not a
+formal privacy guarantee: model updates and shared aggregate statistics may
+still disclose information.
+
+### Decision
+
+The primary research question is:
+
+> **RQ1:** Can federated learning achieve forecasting performance comparable to
+> centralized training without pooling raw station observations?
+
+Comparability will be evaluated as non-inferiority. The acceptable margin,
+primary metric, selected model configurations, and statistical procedure must
+be fixed before evaluating the untouched test split.
+
+An additional research direction is:
+
+> **RQ2:** How does adding differential privacy to federated training affect the
+> privacy–utility trade-off under explicitly stated privacy budgets?
+
+The current experimental focus is RQ1 and does not implement differential
+privacy. Results from the current FedAvg and FedProx pipelines may claim that
+raw observations are not centrally pooled, but may not claim formal privacy,
+secure parameter exchange, or protection of individual client updates.
+
+### Rationale
+
+Separating the questions isolates the effect of federated optimization from the
+effect of clipping and privacy noise. It also makes the present claim match what
+the implementation actually demonstrates while retaining differential privacy
+as a separately measurable privacy–utility question.
+
+### Consequences
+
+- RQ1 remains the main focus of the current experiment and final test protocol.
+- A non-inferiority margin is required before "comparable" can support a
+  confirmatory conclusion.
+- Privacy claims must identify the mechanism and threat model; federated
+  learning alone is not evidence of differential privacy.
+- Any differential-privacy experiment must report its privacy unit, adjacency
+  definition, clipping rule, noise mechanism, accountant, and final
+  `(epsilon, delta)` guarantee.
 
 ---
 
