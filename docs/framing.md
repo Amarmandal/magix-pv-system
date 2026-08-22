@@ -887,6 +887,49 @@ opportunity for client drift.
 
 ---
 
+## D-029 — Primary non-inferiority margin fixed at 0.005 macro-MAE
+
+**Status:** ✅ Decided (2026-08-22)
+
+### Decision
+
+The primary RQ1 comparison is FedProx E=1 with validation-selected `mu = 1`
+versus the centralized MLP. Define the paired performance difference as:
+
+`D = MAE_FedProx - MAE_centralized`
+
+The absolute non-inferiority margin is frozen at:
+
+`delta = 0.005 macro-MAE`
+
+FedProx will be declared non-inferior only if the upper bound of the paired 95%
+confidence interval for `D` is strictly below 0.005. Crossing zero does not
+prevent non-inferiority, but crossing 0.005 makes the result inconclusive.
+
+### Rationale
+
+Capacity factor is normalized to `[0, 1]`, so 0.005 represents 0.5 percentage
+points of capacity-factor MAE. Relative to the five-seed centralized validation
+macro-MAE of approximately 0.112, it corresponds to about 4.5%, providing a
+small and interpretable maximum forecasting penalty for avoiding central
+pooling of raw station observations.
+
+Validation performance demonstrates that this margin is plausible but is not
+the reason for selecting it. The value is fixed before test evaluation and may
+not be changed in response to test results.
+
+### Claim boundaries
+
+- The margin applies only to the primary past-weather, E=1 comparison.
+- FedAvg E=1 and all E=5 analyses remain secondary.
+- Failure to detect a statistically significant difference is not evidence of
+  non-inferiority; the confidence interval must satisfy the stated decision
+  rule.
+- Sensitivity analyses may show other margins, but the headline conclusion must
+  use 0.005.
+
+---
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it

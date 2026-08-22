@@ -1,0 +1,4 @@
+method,n_seeds,macro_mae_mean,macro_mae_std,macro_gap_vs_central_mean,macro_gap_vs_central_std,seeds_better_than_central
+central_mlp,5,0.111986,0.000645,0.0,0.0,0
+fedprox_e1,5,0.114235,0.002197,0.002249,0.002656,1
+fedavg_e1,5,0.116544,0.00161,0.004558,0.00141,0

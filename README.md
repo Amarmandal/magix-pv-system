@@ -13,6 +13,11 @@ the largest practically acceptable federated-versus-centralized performance gap
 before the test split is evaluated. The current work focuses on RQ1 using
 federated learning without a formal differential-privacy guarantee.
 
+The primary non-inferiority margin is frozen at **0.005 absolute macro-MAE**.
+FedProx E=1 (`mu = 1`) is non-inferior to the centralized MLP only if the upper
+bound of the paired 95% confidence interval for
+`MAE_FedProx - MAE_centralized` is below 0.005 (D-029).
+
 **RQ2 — Additional direction:** How does adding differential privacy to
 federated training affect the privacy–utility trade-off under explicitly stated
 privacy budgets?
