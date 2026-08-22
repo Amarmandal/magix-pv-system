@@ -36,6 +36,21 @@ parameter exchange.
 - **Metrics:** daylight-only MAE, RMSE, and MAE skill against same-hour-yesterday
   persistence.
 
+### Primary and secondary federated comparisons
+
+- **Primary RQ1 comparison:** centralized MLP versus FedAvg/FedProx with one
+  local epoch per communication round (`E = 1`). One full-participation E=1
+  round processes every client's training data once, making its data exposure
+  approximately comparable to one centralized epoch.
+- **Secondary experiment:** `E = 5` studies the communication–computation
+  trade-off created by doing more local training before aggregation. These runs
+  are not compute-matched to centralized training, so they do not support the
+  primary non-inferiority claim.
+- The fair like-for-like E=5 algorithm comparison is FedProx E=5 versus FedAvg
+  E=5. Centralized results may be shown alongside them as context.
+- E=5 must not be called more communication-efficient unless round histories
+  demonstrate that it reaches a predefined performance level in fewer rounds.
+
 All published result tables currently use the validation split. The test split
 is reserved for final evaluation.
 

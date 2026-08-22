@@ -42,11 +42,16 @@ interview. Optimise for my understanding, not for finishing fast.
 - **Splits are frozen.** Do not regenerate `configs/splits.json`.
 - **Baselines before models.** No model result is meaningful until it's compared
   against same-hour-yesterday persistence.
+- **RQ1 non-inferiority uses E=1.** Treat centralized MLP versus full-participation
+  FedAvg/FedProx with one local epoch per round as the primary, approximately
+  compute-matched comparison. E=5 is a secondary communication–computation
+  trade-off experiment; do not use it for the primary non-inferiority claim or
+  call it communication-efficient without round-history evidence (D-028).
 
 ## Decision log
 
 Every non-obvious choice gets an entry in `docs/framing.md` as `D-0xx`, with
-status, date, rationale, and what was ruled out. Highest so far: D-027.
+status, date, rationale, and what was ruled out. Highest so far: D-028.
 
 When you make a judgment call, tell me it needs a D-entry. Don't write the entry
 yourself — writing it is how I confirm I understood the choice.

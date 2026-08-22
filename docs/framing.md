@@ -814,6 +814,79 @@ as a separately measurable privacy–utility question.
 
 ---
 
+## D-028 — E=1 primary comparison; E=5 communication–computation analysis
+
+**Status:** ✅ Decided (2026-08-22)
+
+### Context
+
+The centralized MLP processes the pooled training data once per epoch. With
+full client participation, one federated round at `local_epochs = 1` processes
+each client's training data once before aggregation. Their data exposure and
+optimizer-step counts are therefore approximately comparable: the current
+training data produces about 34 centralized optimizer steps per epoch and 32
+federated client optimizer steps per E=1 round.
+
+At `local_epochs = 5`, clients process their local data five times before each
+aggregation. One E=5 round therefore performs about five times as much local
+computation as one E=1 round while still using one communication round. Because
+early-stopping patience is also measured in rounds, E=5 is not compute-matched
+to the centralized MLP under the current limits.
+
+### Decision
+
+The primary RQ1 non-inferiority analysis will compare the centralized MLP with
+full-participation FedAvg and FedProx at `E = 1`. This is the approximately
+compute-matched centralized–federated comparison.
+
+The `E = 5` configurations will be reported as a secondary
+communication–computation trade-off experiment. Their principal comparisons
+are:
+
+1. FedAvg E=5 versus FedAvg E=1 — effect of increased local training.
+2. FedProx E=5 versus FedProx E=1 — effect of increased local training under
+   proximal regularization.
+3. FedProx E=5 versus FedAvg E=5 — like-for-like comparison under the same E=5
+   federated budget.
+
+Centralized performance may appear beside E=5 for predictive context, but E=5
+will not be used to support the primary compute-matched non-inferiority claim.
+
+### Rationale
+
+This separation answers two distinct questions without discarding the E=5
+experiment. E=1 isolates centralized versus federated training under similar
+data exposure. E=5 tests whether additional client computation between server
+aggregations changes performance and whether FedProx helps under the greater
+opportunity for client drift.
+
+### Claim boundaries
+
+- E=5 is not evidence of superior performance under equal computation.
+- Using more local epochs does not by itself demonstrate communication
+  efficiency.
+- A communication-efficiency claim requires round histories and a predefined
+  criterion, such as the number of rounds required to reach a specified
+  validation MAE.
+- If round histories are not available, describe E=5 only as a
+  communication–computation configuration or trade-off experiment.
+- All E=5 statistical comparisons are secondary; the predefined
+  non-inferiority margin applies to the primary E=1 centralized–federated
+  comparison.
+
+### Alternatives considered
+
+- **Use validation-selected E=5 as the primary federated model** — rejected
+  because its larger local-computation budget would confound the primary
+  centralized–federated comparison.
+- **Discard E=5** — rejected because it provides useful evidence about local
+  computation between aggregations and FedProx under increased client drift.
+- **Reduce E=5 to 60 maximum rounds to approximate 300 local epochs** — not
+  adopted because this would constitute a new training protocol and would also
+  require reconsidering early-stopping patience.
+
+---
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it

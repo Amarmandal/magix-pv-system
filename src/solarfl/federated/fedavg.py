@@ -40,10 +40,11 @@ def _global_scaler(X_by_client: list[np.ndarray]) -> tuple[np.ndarray, np.ndarra
     """Global train mu/sigma from per-client aggregates only.
 
     Each client contributes (sum, sum of squares, count) — enough to
-    reconstruct pooled mean/std exactly, without any raw row crossing the
-    client boundary. This makes the scaler identical to the centralized
-    baseline's, so the FedAvg-vs-centralized gap is about training, not
-    preprocessing.
+    reconstruct the pooled mean/std mathematically, without any raw row
+    crossing the client boundary. The result is equivalent to centralized
+    train-only scaling, apart from negligible floating-point differences caused
+    by calculation order and when values are cast to float32. Preprocessing is
+    therefore aligned without claiming bit-for-bit identical scaler arrays.
     """
     agg = [(x.sum(axis=0), (x**2).sum(axis=0), len(x)) for x in X_by_client]
     n = sum(a[2] for a in agg)
