@@ -930,6 +930,91 @@ not be changed in response to test results.
 
 ---
 
+## D-030 — Five-seed policy for the final test comparison
+
+**Status:** ✅ Decided (2026-08-23)
+
+### Decision
+
+The final RQ1 test comparison will train the centralized MLP and FedProx E=1
+(`mu = 1`) with the fixed training seeds `0, 1, 2, 3, 4`. For each seed, both
+methods use the same seed number. The primary estimate is the arithmetic mean
+of the five seed-specific macro-MAE gaps:
+
+`D_seed = macro-MAE_FedProx,seed - macro-MAE_centralized,seed`.
+
+The models are not retrained inside the bootstrap. The five fitted realizations
+are held fixed, every bootstrap resample is applied to all five seeds, and the
+resulting five paired gaps are averaged within that repetition.
+
+### Rationale
+
+Neural-network training is stochastic, so a conclusion based on one seed could
+reflect a favorable or unfavorable initialization. Using the five seeds already
+examined on validation makes the final comparison less seed-specific without
+allowing the test result to select a seed. Applying the same sampled dates to
+all seeds keeps test-period variation aligned across the five comparisons.
+
+### Ruled out
+
+- Selecting the best seed after test evaluation — rejected as test leakage.
+- Treating the five seeds as five independent test datasets — rejected because
+  every seed is evaluated on the same observations.
+- Retraining models inside each bootstrap repetition — rejected because D-031
+  targets uncertainty from the sampled test days, not the distribution of all
+  possible future training runs.
+
+---
+
+## D-031 — Paired complete-day bootstrap for final non-inferiority
+
+**Status:** ✅ Decided (2026-08-23)
+
+### Decision
+
+Uncertainty for the primary test gap will use a paired block bootstrap with:
+
+- complete calendar dates as resampling units;
+- all available clients and retained hourly observations on a selected date
+  kept together;
+- centralized and FedProx errors matched by client, timestamp, and training
+  seed;
+- the same resampled dates applied to both methods and all seeds;
+- `10,000` bootstrap repetitions using bootstrap RNG seed `0`;
+- a two-sided `95%` percentile interval, using the empirical 2.5th and 97.5th
+  percentiles;
+- macro-MAE computed as the unweighted mean of per-client MAEs in each seed,
+  followed by the D-030 average of the five seed-specific gaps.
+
+Calendar dates are derived directly from `measured_ts`. The source timestamps
+are timezone-naive, so the evaluation performs no timezone conversion. FedProx
+is declared non-inferior only when the interval's upper endpoint is strictly
+below the frozen `0.005` margin from D-029.
+
+### Rationale
+
+Centralized and FedProx predictions concern the same station-hours, so pairing
+removes variation caused merely by evaluating the methods under different
+conditions. Hourly PV errors within a day can share weather, solar-cycle, and
+system-state effects; resampling complete dates preserves this within-day
+dependence instead of treating every hour as independent. Ten thousand draws
+provide stable percentile estimates while seed `0` makes the Monte Carlo
+calculation reproducible.
+
+### Ruled out
+
+- Resampling individual hours — rejected because it breaks within-day temporal
+  dependence.
+- Resampling the two methods independently — rejected because it breaks the
+  matched comparison.
+- A normal-theory interval — rejected because the day-level sampling
+  distribution need not be Gaussian.
+- A 95% one-sided bound or 90% two-sided interval — not selected; the frozen
+  rule deliberately uses the more conservative upper endpoint of a two-sided
+  95% interval.
+
+---
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it

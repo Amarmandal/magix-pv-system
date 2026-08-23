@@ -56,7 +56,7 @@ interview. Optimise for my understanding, not for finishing fast.
 ## Decision log
 
 Every non-obvious choice gets an entry in `docs/framing.md` as `D-0xx`, with
-status, date, rationale, and what was ruled out. Highest so far: D-029.
+status, date, rationale, and what was ruled out. Highest so far: D-031.
 
 When you make a judgment call, tell me it needs a D-entry. Don't write the entry
 yourself — writing it is how I confirm I understood the choice.

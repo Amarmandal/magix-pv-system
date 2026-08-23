@@ -18,6 +18,13 @@ FedProx E=1 (`mu = 1`) is non-inferior to the centralized MLP only if the upper
 bound of the paired 95% confidence interval for
 `MAE_FedProx - MAE_centralized` is below 0.005 (D-029).
 
+The frozen one-shot test evaluation passed this criterion. Across training
+seeds 0--4, centralized MLP had mean macro-MAE **0.133405** and FedProx had
+**0.128397**, giving an observed gap of **-0.005008**. The paired complete-day
+bootstrap 95% interval was **[-0.009926, -0.000537]**; its upper endpoint is
+strictly below 0.005, so FedProx E=1 (`mu = 1`) is non-inferior under the
+pre-specified rule (D-030--D-031).
+
 **RQ2 — Additional direction:** How does adding differential privacy to
 federated training affect the privacy–utility trade-off under explicitly stated
 privacy budgets?
@@ -56,8 +63,9 @@ parameter exchange.
 - E=5 must not be called more communication-efficient unless round histories
   demonstrate that it reaches a predefined performance level in fewer rounds.
 
-All published result tables currently use the validation split. The test split
-is reserved for final evaluation.
+Model and hyperparameter choices used validation only. The test split was
+opened once after the D-029--D-031 protocol freeze; final outputs are stored as
+`results/test_evaluation_*.csv`.
 
 ## Repository layout
 
