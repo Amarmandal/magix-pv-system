@@ -1,0 +1,2 @@
+n_calendar_days,n_clients,n_training_seeds,bootstrap_repetitions,bootstrap_seed,confidence_level,central_macro_mae_mean,fedprox_macro_mae_mean,observed_macro_gap,ci_lower,ci_upper,noninferiority_margin,noninferiority_passes
+49,7,5,10000,0,0.95,0.1334048644932722,0.1283970049677785,-0.005007859525493735,-0.009925778938713943,-0.0005373240059134009,0.005,True

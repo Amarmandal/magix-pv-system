@@ -814,6 +814,207 @@ as a separately measurable privacy–utility question.
 
 ---
 
+## D-028 — E=1 primary comparison; E=5 communication–computation analysis
+
+**Status:** ✅ Decided (2026-08-22)
+
+### Context
+
+The centralized MLP processes the pooled training data once per epoch. With
+full client participation, one federated round at `local_epochs = 1` processes
+each client's training data once before aggregation. Their data exposure and
+optimizer-step counts are therefore approximately comparable: the current
+training data produces about 34 centralized optimizer steps per epoch and 32
+federated client optimizer steps per E=1 round.
+
+At `local_epochs = 5`, clients process their local data five times before each
+aggregation. One E=5 round therefore performs about five times as much local
+computation as one E=1 round while still using one communication round. Because
+early-stopping patience is also measured in rounds, E=5 is not compute-matched
+to the centralized MLP under the current limits.
+
+### Decision
+
+The primary RQ1 non-inferiority analysis will compare the centralized MLP with
+full-participation FedAvg and FedProx at `E = 1`. This is the approximately
+compute-matched centralized–federated comparison.
+
+The `E = 5` configurations will be reported as a secondary
+communication–computation trade-off experiment. Their principal comparisons
+are:
+
+1. FedAvg E=5 versus FedAvg E=1 — effect of increased local training.
+2. FedProx E=5 versus FedProx E=1 — effect of increased local training under
+   proximal regularization.
+3. FedProx E=5 versus FedAvg E=5 — like-for-like comparison under the same E=5
+   federated budget.
+
+Centralized performance may appear beside E=5 for predictive context, but E=5
+will not be used to support the primary compute-matched non-inferiority claim.
+
+### Rationale
+
+This separation answers two distinct questions without discarding the E=5
+experiment. E=1 isolates centralized versus federated training under similar
+data exposure. E=5 tests whether additional client computation between server
+aggregations changes performance and whether FedProx helps under the greater
+opportunity for client drift.
+
+### Claim boundaries
+
+- E=5 is not evidence of superior performance under equal computation.
+- Using more local epochs does not by itself demonstrate communication
+  efficiency.
+- A communication-efficiency claim requires round histories and a predefined
+  criterion, such as the number of rounds required to reach a specified
+  validation MAE.
+- If round histories are not available, describe E=5 only as a
+  communication–computation configuration or trade-off experiment.
+- All E=5 statistical comparisons are secondary; the predefined
+  non-inferiority margin applies to the primary E=1 centralized–federated
+  comparison.
+
+### Alternatives considered
+
+- **Use validation-selected E=5 as the primary federated model** — rejected
+  because its larger local-computation budget would confound the primary
+  centralized–federated comparison.
+- **Discard E=5** — rejected because it provides useful evidence about local
+  computation between aggregations and FedProx under increased client drift.
+- **Reduce E=5 to 60 maximum rounds to approximate 300 local epochs** — not
+  adopted because this would constitute a new training protocol and would also
+  require reconsidering early-stopping patience.
+
+---
+
+## D-029 — Primary non-inferiority margin fixed at 0.005 macro-MAE
+
+**Status:** ✅ Decided (2026-08-22)
+
+### Decision
+
+The primary RQ1 comparison is FedProx E=1 with validation-selected `mu = 1`
+versus the centralized MLP. Define the paired performance difference as:
+
+`D = MAE_FedProx - MAE_centralized`
+
+The absolute non-inferiority margin is frozen at:
+
+`delta = 0.005 macro-MAE`
+
+FedProx will be declared non-inferior only if the upper bound of the paired 95%
+confidence interval for `D` is strictly below 0.005. Crossing zero does not
+prevent non-inferiority, but crossing 0.005 makes the result inconclusive.
+
+### Rationale
+
+Capacity factor is normalized to `[0, 1]`, so 0.005 represents 0.5 percentage
+points of capacity-factor MAE. Relative to the five-seed centralized validation
+macro-MAE of approximately 0.112, it corresponds to about 4.5%, providing a
+small and interpretable maximum forecasting penalty for avoiding central
+pooling of raw station observations.
+
+Validation performance demonstrates that this margin is plausible but is not
+the reason for selecting it. The value is fixed before test evaluation and may
+not be changed in response to test results.
+
+### Claim boundaries
+
+- The margin applies only to the primary past-weather, E=1 comparison.
+- FedAvg E=1 and all E=5 analyses remain secondary.
+- Failure to detect a statistically significant difference is not evidence of
+  non-inferiority; the confidence interval must satisfy the stated decision
+  rule.
+- Sensitivity analyses may show other margins, but the headline conclusion must
+  use 0.005.
+
+---
+
+## D-030 — Five-seed policy for the final test comparison
+
+**Status:** ✅ Decided (2026-08-23)
+
+### Decision
+
+The final RQ1 test comparison will train the centralized MLP and FedProx E=1
+(`mu = 1`) with the fixed training seeds `0, 1, 2, 3, 4`. For each seed, both
+methods use the same seed number. The primary estimate is the arithmetic mean
+of the five seed-specific macro-MAE gaps:
+
+`D_seed = macro-MAE_FedProx,seed - macro-MAE_centralized,seed`.
+
+The models are not retrained inside the bootstrap. The five fitted realizations
+are held fixed, every bootstrap resample is applied to all five seeds, and the
+resulting five paired gaps are averaged within that repetition.
+
+### Rationale
+
+Neural-network training is stochastic, so a conclusion based on one seed could
+reflect a favorable or unfavorable initialization. Using the five seeds already
+examined on validation makes the final comparison less seed-specific without
+allowing the test result to select a seed. Applying the same sampled dates to
+all seeds keeps test-period variation aligned across the five comparisons.
+
+### Ruled out
+
+- Selecting the best seed after test evaluation — rejected as test leakage.
+- Treating the five seeds as five independent test datasets — rejected because
+  every seed is evaluated on the same observations.
+- Retraining models inside each bootstrap repetition — rejected because D-031
+  targets uncertainty from the sampled test days, not the distribution of all
+  possible future training runs.
+
+---
+
+## D-031 — Paired complete-day bootstrap for final non-inferiority
+
+**Status:** ✅ Decided (2026-08-23)
+
+### Decision
+
+Uncertainty for the primary test gap will use a paired block bootstrap with:
+
+- complete calendar dates as resampling units;
+- all available clients and retained hourly observations on a selected date
+  kept together;
+- centralized and FedProx errors matched by client, timestamp, and training
+  seed;
+- the same resampled dates applied to both methods and all seeds;
+- `10,000` bootstrap repetitions using bootstrap RNG seed `0`;
+- a two-sided `95%` percentile interval, using the empirical 2.5th and 97.5th
+  percentiles;
+- macro-MAE computed as the unweighted mean of per-client MAEs in each seed,
+  followed by the D-030 average of the five seed-specific gaps.
+
+Calendar dates are derived directly from `measured_ts`. The source timestamps
+are timezone-naive, so the evaluation performs no timezone conversion. FedProx
+is declared non-inferior only when the interval's upper endpoint is strictly
+below the frozen `0.005` margin from D-029.
+
+### Rationale
+
+Centralized and FedProx predictions concern the same station-hours, so pairing
+removes variation caused merely by evaluating the methods under different
+conditions. Hourly PV errors within a day can share weather, solar-cycle, and
+system-state effects; resampling complete dates preserves this within-day
+dependence instead of treating every hour as independent. Ten thousand draws
+provide stable percentile estimates while seed `0` makes the Monte Carlo
+calculation reproducible.
+
+### Ruled out
+
+- Resampling individual hours — rejected because it breaks within-day temporal
+  dependence.
+- Resampling the two methods independently — rejected because it breaks the
+  matched comparison.
+- A normal-theory interval — rejected because the day-level sampling
+  distribution need not be Gaussian.
+- A 95% one-sided bound or 90% two-sided interval — not selected; the frozen
+  rule deliberately uses the more conservative upper endpoint of a two-sided
+  95% interval.
+
+---
+
 ## 4. Open — blocking
 
 Question · why it blocks · what would resolve it · which notebook owns it

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -117,9 +118,38 @@ def _split_mask(ts: pd.Series, station_id: str, split: str) -> pd.Series:
     return mask
 
 
+@overload
 def build_features(
-    station_id: str, split: str | None = None
-) -> tuple[pd.DataFrame, pd.Series]:
+    station_id: str,
+    split: str | None = None,
+    *,
+    return_timestamps: Literal[False] = False,
+) -> tuple[pd.DataFrame, pd.Series]: ...
+
+
+@overload
+def build_features(
+    station_id: str,
+    split: str | None = None,
+    *,
+    return_timestamps: Literal[True],
+) -> tuple[pd.DataFrame, pd.Series, pd.Series]: ...
+
+
+def build_features(
+    station_id: str,
+    split: str | None = None,
+    *,
+    return_timestamps: bool = False,
+) -> tuple[pd.DataFrame, pd.Series] | tuple[pd.DataFrame, pd.Series, pd.Series]:
+    """Build an aligned model matrix and target for one client.
+
+    Existing callers receive ``(X, y)``. Evaluation code that needs to retain
+    temporal grouping can request ``(X, y, timestamps)`` by passing
+    ``return_timestamps=True``. The timestamps are taken after split filtering
+    and required-value filtering, so row ``i`` refers to the same observation
+    in all three returned objects.
+    """
     labels = station_labels()
     capacity_kw = labels[station_id]["capacity_kw"]
 
@@ -191,4 +221,7 @@ def build_features(
 
     X = df[MODEL_MATRIX].reset_index(drop=True)
     y = df[TARGET].reset_index(drop=True)
+    if return_timestamps:
+        timestamps = df["measured_ts"].reset_index(drop=True)
+        return X, y, timestamps
     return X, y
