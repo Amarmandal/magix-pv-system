@@ -1,1042 +1,582 @@
-# P0 — Framing & Decision Log
+# Framing and decision log
 
-Last updated: 2026-08-22
+Last updated: 2026-09-04
 
-## 1. Problem
+This file records choices that define the experiment. Implementation detail
+belongs in code, and extended analysis belongs in the cited notebooks or result
+tables.
 
-### RQ1 — Primary
+## Research questions
 
-Can federated learning achieve forecasting performance comparable to
-centralized training without pooling raw station observations?
+**RQ1 — Primary:** Can federated learning achieve forecasting performance
+comparable to centralized training without pooling raw station observations?
+“Comparable” is evaluated through the pre-specified non-inferiority protocol in
+D-029–D-031.
 
-"Comparable" is treated as a non-inferiority question. The practically
-acceptable performance margin and the statistical evaluation procedure must be
-fixed before the test split is evaluated.
+**RQ2 — Future direction:** How does differential privacy affect the
+privacy–utility trade-off under explicit privacy budgets? The current system
+does not implement differential privacy, secure aggregation, or protected
+parameter exchange.
 
-### RQ2 — Additional direction
+## Data
 
-How does adding differential privacy to federated training affect the
-privacy–utility trade-off under explicitly stated privacy budgets?
+Daskalov, Andrej; Zdravevski, Eftim (2026), “Dataset for unified
+photovoltaic-weather multi-station analysis in North Macedonia,” Mendeley Data,
+V2, DOI: [`10.17632/4zgsckxpdy.2`](https://doi.org/10.17632/4zgsckxpdy.2).
 
-The current experimental focus is RQ1. Its federated implementation avoids
-central pooling of raw observations, but exchanges unprotected model updates
-and aggregate feature statistics. It therefore provides no formal differential-
-privacy guarantee and must not be described as secure parameter exchange.
-
-## 2. Data
-
-Daskalov, Andrej; Zdravevski, Eftim (2026), “Dataset for unified photovoltaic-weather multi-station analysis in North Macedonia”, Mendeley Data, V2, doi: 10.17632/4zgsckxpdy.2
-
-## 3. Decisions
-
-### D-001 :- Fact table = `hourly_pv_weather_stations.csv`
+## D-001 — Use the hourly station fact table
 
 **Status:** Decided
 
-**Evidence:** `01_eda.ipynb` file inventory
+**Decision:** Use `hourly_pv_weather_station.csv` as the experiment fact table.
 
-### D-002 :- Client Grain = station -> 7 clients
+**Why:** It contains the hourly station-level production and weather records
+required by the forecasting task.
 
-**Status:** Decided
+**Evidence:** `notebooks/01_eda.ipynb` file inventory.
 
-**Evidence:** `01_eda.ipynb` notebook, `processed/client` and `data/processed/splits.json`
+**Rejected:** Other source files do not provide the required station-hour grain.
 
-### D-003 :- Data split = per-client temporal, 70/15/15, cut by row position
-
-**Status:** Decided
-
-**Evidence:** `splits.py` inside solarlf package, `processed/client` and `data/processed/splits.json`
-
-Each client is split on its own timeline: first 70% of its observations to
-train, next 15% val, last 15% test.
-
-**Rejected:** global calendar cut — stations commissioned at different dates,
-so some clients would get an empty or unrepresentative train set. Cut by time
-_span_ — with ~21% mean inter-day missingness, a time-based 70% mark does not
-put 70% of observations in train. Random split — adjacent hours are near
-duplicates; leaks by construction.
-
-**Consequence:** cut dates differ per client, so each test set has a different
-seasonal composition. Must be stated alongside results, not buried.
-Determinism: no seed is involved — sorting and slicing is reproducible by
-construction.
-
-### D-004 :- Task Family = h-ahead forecasting
-
-**Status:** Decided; horizon subsequently fixed at H = 24 by D-012
-
-**Evidence:**
-
-### D-005 :- Feature Selection for Client-Invariant Training
+## D-002 — Treat each station as one client
 
 **Status:** Decided
 
-**Decision:**
-Drop the features `tilt`, `azimuth`, `station_hash_id`, and `source` before model training.
+**Decision:** Use one PV station per federated client, giving seven clients.
 
-**Evidence:**
-A variance audit was performed to identify features that remain constant within each client (station). These features were then evaluated across the pooled dataset. `04_scope-feature.ipynb`
+**Why:** Station boundaries represent the natural data silos and preserve local
+observations during federated training.
 
-- `tilt` and `azimuth` were found to be **globally constant** (`n_unique_pooled = 1`). Since every observation shares the same value, they contain no predictive information and only increase feature dimensionality. Their removal is standard data-cleaning (housekeeping) and does not affect model behaviour.
+**Evidence:** `notebooks/01_eda.ipynb`, `data/processed/client/`, and
+`configs/splits.json`.
 
-- `station_hash_id` and `source` were found to vary **only across clients**, not within clients. These features encode client identity rather than the underlying physical relationship between weather variables and power generation. Retaining them would allow the model to memorize station-specific behaviour instead of learning patterns that generalize to unseen stations.
+**Rejected:** Arbitrary row partitions would not represent real station silos.
 
-Because the project aims to learn a client-invariant weather-to-production
-relationship, retaining client identifiers would let a pooled model memorize
-station-specific offsets. Therefore, these features are intentionally removed
-as a methodological design decision rather than a preprocessing convenience.
-
-**Rationale:**
-The objective of the study is to evaluate whether Federated Learning can learn
-a shared relationship across clients without pooling their rows. Feature
-selection should therefore preserve variables that represent the forecasting
-problem and exclude variables that either:
-
-1. provide no information (`tilt`, `azimuth`), or
-2. reveal client identity (`station_hash_id`, `source`).
-
-This ensures that model performance reflects learned relationships between input variables and photovoltaic power generation rather than memorization of individual client characteristics.
-
-### D-006 :- Remove Redundant Shortwave Radiation Feature
+## D-003 — Use per-client chronological 70/15/15 splits
 
 **Status:** Decided
 
-**Decision**
+**Decision:** Sort each client by timestamp and split by row position into 70%
+train, 15% validation, and 15% test. Splits are deterministic and frozen in
+`configs/splits.json`; boundary dates may differ by client.
 
-Retain `direct_radiation` and `diffuse_radiation`.
-Remove `shortwave_radiation` during model training.
+**Why:** Stations have different commissioning dates and roughly 21% inter-day
+missingness, so global-calendar or elapsed-time cuts can produce unrepresentative
+partitions.
 
-**Evidence**
+**Evidence:** `src/solarfl/data/splits.py` and `configs/splits.json`.
 
-The physical identity
+**Rejected:** Random splits leak adjacent-hour information; a global calendar
+cut can leave clients empty; elapsed-time ratios do not preserve row ratios.
 
-shortwave_radiation = direct_radiation + diffuse_radiation
+## D-004 — Define an h-ahead forecasting task
 
-was verified exactly over all 13,444 daytime observations. For detail refer to `04_scope-feature.ipynb`.  
-and cell 4
+**Status:** Superseded by D-012
 
-Residual statistics:
+**Decision:** Frame the problem as forecasting a future target at a fixed
+horizon rather than contemporaneous estimation. D-012 fixes the horizon at 24
+hours.
 
-- mean = 0.0
-- std = 0.0
-- max = 0.0
+**Why:** A declared horizon determines which inputs are available and which lags
+are leakage-safe.
 
-**Rationale**
+**Evidence:** D-011 and D-012.
 
-`shortwave_radiation` is a deterministic linear combination of the other two features and therefore contributes no additional information.
+**Rejected:** Contemporaneous prediction does not answer the day-ahead question.
 
-The direct and diffuse components preserve cloudiness information that the summed measurement does not.
-
-Removing the derived feature reduces redundancy and avoids perfect multicollinearity in linear models.
-
-### D-007 :- Exclude Instantaneous Radiation Features
-
-**Status:** Decided
-
-**Decision**
-
-Exclude all \*\_instant radiation variables from the baseline feature specification.
-
-**Evidence**
-
-The correlation between each hourly-mean radiation variable and its corresponding instantaneous measurement was weak (approximately −0.35 to 0.22), indicating that the instantaneous variables do not behave as direct counterparts of the hourly observations.
-
-**Rationale**
-
-Because their temporal relationship could not be established confidently, the instantaneous variables were excluded from the baseline feature set. They may be revisited after validating their timestamp semantics.
-
-### D-008 :- Replace Weather-derived cos_zenith with Deterministic Astronomical Computation
+## D-005 — Exclude constant and client-identity features
 
 **Status:** Decided
 
-**Decision**
+**Decision:** Exclude `tilt`, `azimuth`, `station_hash_id`, and `source` from
+model inputs.
 
-Replace the previous cos_zenith implementation based on
+**Why:** `tilt` and `azimuth` are globally constant; `station_hash_id` and
+`source` vary only across clients and would let a pooled model memorize station
+identity rather than learn a shared weather-to-power relationship.
 
-$$\cos(\text{zenith}) = \frac{\text{direct\_radiation}}{\text{direct\_normal\_irradiance}}$$
+**Evidence:** Variance audit in `notebooks/04_scope-features.ipynb` and
+`configs/features.yaml`.
 
-with the deterministic implementation derived from top-of-atmosphere (terrestrial) radiation.
+**Rejected:** Retaining identifiers would undermine the client-invariant
+comparison.
 
-**Evidence**
+## D-006 — Remove redundant shortwave radiation
 
-- Correlation with previous implementation: 0.9991
-- Maximum absolute deviation: 0.0442
-- Coverage increased from 11,962 to 13,444 daytime observations (+1,482 rows, +11%).
-- `04_scope-features.ipynb` Check the Resolving problematic cos zenith cell
+**Status:** Decided
 
-**Rationale**
+**Decision:** Retain `direct_radiation` and `diffuse_radiation`; exclude
+`shortwave_radiation` from model inputs.
 
-The previous implementation depended on measured weather variables (direct_radiation and direct_normal_irradiance) and excluded observations where DNI ≤ 10, reducing coverage and introducing weather-dependent feature availability.
+**Why:** `shortwave_radiation = direct_radiation + diffuse_radiation`, so the sum
+adds no information and creates perfect multicollinearity. The components retain
+the direct-versus-diffuse distinction.
 
-The new implementation derives cos_zenith from deterministic astronomical quantities, making it available for all daytime observations and for any future prediction timestamp without requiring weather measurements.
+**Evidence:** Exact zero residual across 13,444 daylight observations in
+`notebooks/04_scope-features.ipynb`.
 
-### D-009 :- Target = capacity factor, denominator = producing inverters only
+**Rejected:** Keeping all three radiation variables is redundant.
 
-**Status:** Decided on 2026-07-25
+## D-007 — Exclude instantaneous radiation variables
 
-**Evidence:** `03_derive-station-capacity.ipynb`
+**Status:** Decided
 
-Capacity factor = hourly production ÷ (Σ max_power over PRODUCING inverters × 1h).
-The 3 non-producing inverters (all b59685487, 3× SUN2000-50KTL-M3 @ 55kW = 165kW)
-are excluded so the denominator matches the numerator's device set.
+**Decision:** Exclude all `*_instant` radiation variables from the baseline
+feature specification.
 
-**Rejected:** summing all 53 rated inverters — would divide real output by 165kW
-of never-commissioned capacity, making b59685487 a false chronic underperformer.
+**Why:** Their timestamp semantics could not be established; correlations with
+the corresponding hourly means ranged only from about −0.35 to 0.22.
 
-### D-010 — Impossible Capacity Factors Set to NaN
+**Evidence:** `notebooks/04_scope-features.ipynb` and `configs/features.yaml`.
 
-**Status:** Decided (2026-07-28)  
-**Evidence:** `05_target-capacity-factor.ipynb`
+**Rejected:** Treating instantaneous values as hourly counterparts without
+validated timing could misalign predictors and targets.
 
-**Decision**
+## D-008 — Derive solar geometry deterministically
 
-Set all `capacity_factor > 1.0` values to `NaN`.
+**Status:** Decided
 
-**Rationale**
+**Decision:** Derive `cos_zenith` from top-of-atmosphere
+`terrestrial_radiation`, replacing the weather-dependent
+`direct_radiation / direct_normal_irradiance` calculation.
 
-A capacity factor greater than **1.0** is physically impossible—a photovoltaic system cannot produce more than its rated capacity over an hourly interval.
+**Why:** The deterministic method is available for future timestamps and avoids
+dropping rows when direct-normal irradiance is small.
 
-**Evidence**
+**Evidence:** Correlation `0.9991`, maximum absolute deviation `0.0442`, and
+coverage increase from 11,962 to 13,444 daylight rows (+11%) in
+`notebooks/04_scope-features.ipynb`.
 
-- **87** invalid rows detected out of **17,983** total rows (**0.48%**).
-- Distribution:
-  - **S3:** 1 row
-  - **S7:** 86 rows
+**Rejected:** The former weather-derived ratio reduced coverage and made solar
+geometry depend on measured weather.
 
-**Implementation**
+## D-009 — Define capacity factor using producing inverters
 
-Values were replaced with `NaN` rather than deleting the rows because `splits.json` preserves row indices. Removing rows would invalidate the existing train/test splits and break `load_split()`.
+**Status:** Decided · 2026-07-25
 
-**Validation**
+**Decision:** Define hourly capacity factor as production divided by the summed
+rated power of producing inverters for that station.
 
-The anomalies are **not** caused by missing timestamps:
+**Why:** Three non-producing SUN2000-50KTL-M3 inverters at station
+`b59685487` contribute 165 kW of nominal capacity but no production; including
+them would create false chronic underperformance.
 
-- All 86 affected rows in **S7** occur at a regular **1-hour interval** (`std = 0.0`).
-- The actual timestamp gaps occur in other (valid) observations, with gaps of up to **77 hours**.
+**Evidence:** `notebooks/03_derive-station-capacity.ipynb`.
 
-### D-011 — Exclude Contemporaneous System-State Columns
+**Rejected:** Summing all 53 rated inverters mismatches the numerator’s device
+set.
 
-**Status:** Decided (2026-07-28)
+## D-010 — Blank physically impossible capacity factors
 
-**Decision**
+**Status:** Decided · 2026-07-28
 
-Exclude the following columns from the model feature set:
+**Decision:** Set `capacity_factor > 1.0` to `NaN` without deleting rows.
 
-- `ac_power`
-- `dc_power`
-- `efficiency`
-- `device_temperature`
-- `perc_state_on`
-- `perc_state_off`
-- `perc_state_error`
+**Why:** Values above rated hourly capacity are physically invalid, while row
+deletion would invalidate the frozen split counts.
 
-**Rationale**
+**Evidence:** 87 of 17,983 rows (0.48%): one at S3 and 86 at S7, identified in
+`notebooks/05_target-capacity-factor.ipynb`. S7 anomalies occur on a regular
+hourly grid and are not timestamp-gap artifacts.
 
-These features are **not available at forecast time**.
+**Rejected:** Deleting rows breaks split integrity; keeping the values corrupts
+the target.
 
-- `ac_power`, `dc_power`, `efficiency`, and `device_temperature` are measurements of the target or its direct consequences, introducing **target leakage**.
-- `perc_state_on`, `perc_state_off`, and `perc_state_error` describe the inverter's operating state during the **predicted hour**, which cannot be known before the prediction is made.
+## D-011 — Exclude contemporaneous system state
 
-**Scope**
+**Status:** Decided · 2026-07-28
 
-This decision is valid for **all forecasting horizons** (`H ≥ 1`) and is therefore independent of **Q-001**.
+**Decision:** Exclude `ac_power`, `dc_power`, `efficiency`,
+`device_temperature`, `perc_state_on`, `perc_state_off`, and
+`perc_state_error` at the target time.
 
-**Future Use**
+**Why:** They measure the target, its consequences, or inverter state during the
+predicted hour and are unavailable at forecast time. They may be used only as
+lags of at least the forecast horizon or in non-forecasting tasks.
 
-These features remain valuable as **lagged features** once the forecasting horizon is fixed (`lag ≥ H`). They are also suitable for **anomaly detection** tasks, where the current system state is the signal of interest rather than a source of leakage.
+**Evidence:** `configs/features.yaml` and `src/solarfl/data/features.py`.
 
-## D-012 — Forecast Horizon: H = 24 Hours
+**Rejected:** Contemporaneous use is target leakage for every horizon `H ≥ 1`.
 
-**Status:** ✅ Decided (2026-07-30)  
-**Resolves:** Q-001
+## D-012 — Fix the forecast horizon at 24 hours
 
-### Decision
+**Status:** Decided · 2026-07-30 · resolves Q-001
 
-Use a **24-hour (day-ahead)** forecast horizon. All historical (lag) features must use **lag ≥ 24 hours**.
+**Decision:** Predict 24 hours ahead and require every historical feature to use
+`lag ≥ 24`.
 
-### Rationale
+**Why:** Day-ahead forecasting is operationally relevant and emphasizes a
+shared weather-to-power relationship; a one-hour task would be dominated by
+persistence. Lag-24 remains available for approximately 96–98% of usable rows.
 
-- At **H = 1**, **persistence** (current production ≈ next-hour production) is the dominant signal. Each client can solve the task independently, leaving little benefit for Federated Learning (FL).
-- At **H = 24**, persistence is much weaker. The prediction depends primarily on the **weather → power generation** relationship, which is governed by the same underlying physics across all solar plants.
-- This shared relationship is exactly the type of knowledge that **Federated Averaging** can learn and transfer between clients.
-- A 24-hour horizon also aligns with **day-ahead electricity market operations**, making the task practically relevant.
+**Evidence:** `configs/features.yaml`, `src/solarfl/data/features.py`, and
+`notebooks/06_timeseries-eda.ipynb`.
 
-### Trade-offs
+**Rejected:** `H = 1` provides little scope for federated knowledge transfer and
+does not answer the paper’s day-ahead question.
 
-- Higher forecast errors compared to short-horizon forecasting.
-- Lag-24 features require a complete hourly time index. After reindexing, approximately
-  96–98% of samples have a valid lag-24 feature; the remaining missing values arise
-  primarily from inter-day gaps and quality filtering (e.g., invalid capacity factors).
-- Weather and solar geometry features remain available for all samples.
+## D-013 — Replace planned personalization with FedProx
 
-### Consequence
+**Status:** Partly superseded by D-026 · 2026-08-04
 
-The project evaluates whether Federated Learning can learn a **shared weather-to-production mapping**, rather than simply matching a strong persistence baseline.
+**Decision:** Retain the completed FedAvg evaluation, but replace the proposed
+personalized-FL experiment with FedProx.
 
-## D-013 — Evaluate FedAvg and Personalized FL (superseded in part)
+**Why:** Clients show heterogeneous levels but broadly shared irradiance-response
+patterns. FedProx tests heterogeneous optimization within the existing global
+model pipeline.
 
-**Status:** ⚠️ FedAvg completed; personalized FL superseded by D-026 (2026-08-04)
+**Evidence:** FedAvg and FedProx runners plus D-026.
 
-### Decision
+**Rejected:** FedProx must not be described as personalized; genuine
+personalization remains future work.
 
-Evaluate both **FedAvg** and a **personalized Federated Learning** variant against a centralized baseline.
+## D-014 — Separate deployable and perfect-weather variants
 
-### Rationale
+**Status:** Decided · 2026-07-30
 
-Exploratory analysis shows consistent client-level differences (approximately 2× spread in capacity factor) while the irradiance response curves remain approximately parallel. This suggests a shared weather-to-power relationship with client-specific offsets rather than different underlying physics. A personalized FL approach is therefore expected to better capture client heterogeneity than a single global FedAvg model.
+**Decision:** Build `weather_past_*` from observations at T−24 for the deployable
+variant and `weather_future_*` from ERA5 at T for an explicitly labelled
+perfect-weather upper bound.
 
-### Trade-offs
+**Why:** The two variants distinguish model-transfer performance from future
+weather forecast error.
 
-- Requires implementing and evaluating a second FL method.
-- Personalization strategy (e.g., which layers remain local) must be defined.
+**Evidence:** `configs/features.yaml` and `src/solarfl/data/features.py`.
 
-### Consequence
+**Rejected:** ERA5 reanalysis at T is not a real day-ahead forecast and cannot
+support deployment claims.
 
-FedAvg was evaluated. The planned personalized method was not implemented;
-FedProx was selected as the second federated algorithm in D-026. FedProx
-addresses heterogeneous optimization but still produces one shared global model,
-so it must not be described as personalized FL.
+## D-015 — Train and evaluate on daylight rows
 
-## D-014 — Weather features: lagged-observed vs perfect-forecast
+**Status:** Decided · 2026-08-02
 
-**Status:** ✅ Decided (2026-07-30)
+**Decision:** Train and report metrics only where top-of-atmosphere radiation is
+above 10 W/m² and the full shared model matrix is present. Past- and
+perfect-weather variants use the same rows.
 
-### Decision
+**Why:** Night production is trivially zero and would artificially improve
+metrics; `kt` is undefined at night. Requiring the shared matrix makes variant
+comparisons paired.
 
-The builder produces two sets of weather features:
+**Evidence:** 17,983 raw rows yield 13,398 daylight rows and 12,872 model rows;
+per-client retention is 95.3–96.7% of daylight rows. Persistence MAE is
+identical across variants in `results/baselines_val.csv`.
 
-- **`weather_past_*`**: observed weather at the forecast origin (**T−24**). These values would be available when making the prediction.
-- **`weather_future_*`**: weather at the target time (**T**). These represent a **perfect forecast** and would not be available in a real deployment.
+**Rejected:** Imputing night `kt = 0` plus a night indicator would reward trivial
+night predictions.
 
-### Rationale
+## D-016 — Compute lags before applying split filters
 
-Both feature sets are generated, and each model variant chooses which one to use.
+**Status:** Decided · 2026-08-02
 
-- **Lagged-only weather** provides a realistic baseline.
-- **Perfect-forecast weather** provides an optimistic upper bound, allowing us to isolate whether the weather→power relationship transfers across clients under FedAvg without forecast error.
+**Decision:** Compute `history_capacity_factor` and `weather_past_*` on each
+client’s full chronological timeline, then select train, validation, or test
+rows using the frozen half-open boundaries.
 
-### Trade-offs
+**Why:** A validation or test observation may legitimately use information from
+T−24 even when that earlier row lies in the preceding split.
 
-- Results using **`weather_future_*`** assume perfect knowledge of future weather and therefore cannot be deployed in practice.
-- Real day-ahead weather forecasts (e.g., Open-Meteo) include forecast errors and are not used in this project.
+**Evidence:** `_split_mask` and operation order in
+`src/solarfl/data/features.py`; counts are checked against
+`configs/splits.json`.
 
-### Consequence
+**Rejected:** Filtering first would unnecessarily blank the first 24 hours of
+each split.
 
-All results using **`weather_future_*`** are explicitly labelled as **perfect-forecast** and interpreted as an upper bound. They are not directly comparable to a real-world forecasting system.
+## D-017 — Clip predictions to the physical range
 
-## D-015 — Evaluation is daylight-only
+**Status:** Decided · 2026-08-02
 
-**Status:** ✅ Decided (2026-08-02)
+**Decision:** Clip every fitted-model prediction to `[0, 1]` before computing
+metrics. Persistence is already bounded through D-010.
 
-### Decision
+**Why:** Capacity factor cannot fall outside `[0, 1]`, and clipping materially
+affects linear models.
 
-Model training and all reported metrics cover **daylight hours only**. Night rows
-are excluded from the model matrix as a consequence of `kt` being undefined when
-top-of-atmosphere radiation ≤ 10 W/m² (D-008 guard), combined with the
-`dropna(subset=MODEL_MATRIX + ["capacity_factor"])` in `build_features`.
+**Evidence:** Ridge produced 117/2,059 negative predictions for the past variant
+(5.7%) and 253/2,059 for perfect weather (12.3%); implementation is in
+`src/solarfl/models/baselines.py`.
 
-Rows are additionally required to have **all** feature columns present, including
-`weather_future_*`. The `past` and `perfect` variants are therefore scored on an
-identical row set.
+**Rejected:** Scoring physically impossible predictions distorts the comparison.
 
-### Evidence
+## D-018 — Share one MLP architecture across regimes
 
-`src/solarfl/data/features.py`, measured 2026-08-02:
+**Status:** Decided · 2026-08-02
 
-| client | raw rows | daylight | in model matrix | matrix/daylight |
-| ------ | -------- | -------- | --------------- | --------------- |
-| S1     | 2470     | 1453     | 1392            | 0.958           |
-| S2     | 1627     | 1453     | 1392            | 0.958           |
-| S3     | 1789     | 1604     | 1549            | 0.966           |
-| S4     | 1769     | 1601     | 1548            | 0.967           |
-| S5     | 1770     | 1601     | 1548            | 0.967           |
-| S6     | 1759     | 1588     | 1536            | 0.967           |
-| S7     | 6799     | 4098     | 3907            | 0.953           |
+**Decision:** Local, centralized, FedAvg, and FedProx use `MLP(hidden=(64, 32))`
+with ReLU, Adam (`lr=1e-3`), MSE loss, batch size 256, and validation-MAE early
+stopping with patience 25 and best-weight restore. Scaling is fitted on training
+data only. Baseline runs use seed 0; D-030 defines final-test seeds.
 
-- Total: 17,983 raw → 13,398 daylight (74.5%) → 12,872 in matrix (71.6% of raw).
-- The 95.3–96.7% matrix/daylight retention is the lag-24 availability rate, and
-  independently confirms the 96–98% figure asserted in D-012.
-- Persistence MAE is identical across the `past` and `perfect` variants for every
-  client in `results/baselines_val.csv`, confirming the two variants share a
-  row set.
+**Why:** A shared architecture and selection criterion isolate the effect of the
+training regime. PyTorch exposes the parameters required for aggregation.
 
-### Rejected
+**Evidence:** `src/solarfl/models/mlp.py` and reproducible
+`results/baselines_val.csv`.
 
-Imputing `kt = 0` at night plus a night indicator, which would retain all 17,983
-rows.
+**Rejected:** `sklearn`’s MLP did not expose a suitable `state_dict`. The fixed,
+untuned architecture remains a stated capacity confound.
 
-### Rationale
+## D-019 — Define MAE skill against persistence
 
-- Keeping the night hour rows is not sensible because predicting night does not demonstrate forecast ability
-- It will just make the metrics look artificially better
-- Also, forecasting the Night time production is trivial (Night -> 0)
+**Status:** Decided · 2026-08-02
 
----
+**Decision:** Report `skill = 1 − MAE(model) / MAE(persistence)`, where
+persistence predicts the realized capacity factor from T−24. Positive skill
+beats persistence; persistence has skill zero. Report MAE and RMSE separately.
 
-## D-016 — Lag features computed on the full timeline, split filter applied afterwards
+**Why:** MAE is the primary error measure and persistence has heavier error
+tails, so RMSE-based skill would systematically inflate apparent gains.
 
-**Status:** ✅ Decided (2026-08-02)
+**Evidence:** `src/solarfl/eval/metrics.py`; validation RMSE/MAE ratios are
+1.46–1.63 for persistence and 1.27–1.61 for fitted models.
 
-### Decision
+**Rejected:** RMSE-based skill answers a different, tail-weighted question.
 
-`build_features(station_id, split=...)` computes `history_capacity_factor` and  
-`weather_past_*` against the client's **entire** timeline, then filters rows down  
-to the requested split. A val or test row therefore retains a T−24 value that may  
-originate from a row belonging to an earlier split.
+## D-020 — Select models on validation before opening test
 
-Split boundaries are read from `configs/splits.json` and the resulting row counts
-are verified against the manifest, raising on mismatch.
+**Status:** Decided · 2026-08-02
 
-### Evidence
+**Decision:** Use train data for fitting and validation data for early stopping,
+algorithm comparison, and FedProx `mu` selection. Freeze D-029–D-031 before the
+one-time final test evaluation.
 
-- `_split_mask` and the ordering of operations in
-  `src/solarfl/data/features.py`.
-- Half-open interval convention matches `splits._assign`:
-  `[.., train_end) [train_end, val_end) [val_end, ..]`.
-- Manifest verification is enforced twice: total row count against `n_total`, and
-  per-split selected count against `counts[split]`.
+**Why:** Keeping test data outside model selection preserves the final
+confirmatory comparison.
 
-### Rejected
+**Evidence:** `results/*_val.csv`, the experiment runners, and
+`src/solarfl/eval/test_evaluation.py`.
 
-Filtering to the split first, then computing lags within it. This would blank the
-first 24 hours of every split.
+**Boundary:** Validation has only 2,059 correlated daylight rows (roughly 25
+days per client); an approximate per-client MAE-difference SE of 0.006–0.008
+makes small validation gaps exploratory rather than conclusive.
 
----
+## D-021 — Implement FedAvg directly
 
-## D-017 — Predictions clipped to the physical range [0, 1]
+**Status:** Decided · 2026-08-04
 
-**Status:** ✅ Decided (2026-08-02)
+**Decision:** Implement the FedAvg simulation directly: broadcast the global
+model, train every client, collect parameters, aggregate by sample count,
+evaluate pooled validation MAE, and restore the best global model.
 
-### Decision
+**Why:** The study compares algorithms offline on one machine; a compact loop
+makes aggregation, optimizer state, and stopping behavior transparent without
+distributed-system abstractions.
 
-All model predictions are clipped to `[0, 1]` before any metric is computed
-(`_clip` in `src/solarfl/models/baselines.py`). Persistence is not clipped, as it
-is already a realised capacity factor and bounded by construction (D-010).
+**Evidence:** `src/solarfl/federated/fedavg.py`.
 
-### Evidence
+**Rejected:** Flower adds deployment machinery not needed here. The direct
+simulation does not model networks, unavailable clients, or asynchronous
+training.
 
-The clip is not cosmetic — it binds frequently on the linear model:
+## D-022 — Reconstruct a global scaler from aggregates
 
-| model | variant | predictions below 0 | rate  |
-| ----- | ------- | ------------------- | ----- |
-| ridge | past    | 117 / 2059          | 5.7%  |
-| ridge | perfect | 253 / 2059          | 12.3% |
+**Status:** Decided · 2026-08-04
 
----
+**Decision:** Each client contributes feature `sum`, `sum_sq`, and `count`; the
+server reconstructs global training means and standard deviations and returns
+one scaler to all clients.
 
-## D-018 — One shared MLP architecture across every training regime
+**Why:** This exactly matches centralized normalization without transmitting raw
+feature vectors and prevents preprocessing differences from confounding the
+training-regime comparison.
 
-**Status:** ✅ Decided (2026-08-02)
+**Evidence:** Federated scaler code in `src/solarfl/federated/`.
 
-### Decision
+**Boundary:** Aggregate statistics still cross client boundaries and are not a
+formal privacy mechanism.
 
-Local, centralized, FedAvg, and FedProx runs all use the same model class:
-`MLP(hidden=(64, 32))`, ReLU, Adam at lr 1e-3, MSE loss, batch size 256, early
-stopping on validation MAE with patience 25 and best-weight restore, seed 0.
-Implemented in PyTorch (`src/solarfl/models/mlp.py`).
+## D-023 — Fix the FedAvg training configuration
 
-Feature standardisation (`mu`, `sigma`) is fitted on the **train split only** and
-is carried with the fitted model in `FittedMLP`.
+**Status:** Decided · 2026-08-04
 
-### Evidence
+**Decision:** Use full client participation, one local epoch per round (`E=1`),
+a fresh Adam optimizer for each client-round, sample-count-weighted aggregation,
+and pooled-validation-MAE early stopping with patience measured in rounds.
 
-- `src/solarfl/models/mlp.py`.
-- Run-to-run and machine-to-machine reproducibility confirmed: the results table
-  in `results/baselines_val.csv` reproduced bit-for-bit on 2026-08-02.
+**Why:** E=1 approximately matches one centralized pass over all training data;
+fresh optimizers avoid retaining moments after global parameters are replaced;
+sample weighting follows standard FedAvg.
 
-### Rejected
+**Evidence:** `src/solarfl/federated/fedavg.py` and D-028.
 
-`sklearn.neural_network.MLPRegressor` — no accessible `state_dict`, which FedAvg
-requires for weight averaging.
+**Rejected:** Partial participation, uniform weighting, persistent client
+optimizer state, and decentralized stopping are outside this study.
 
-### Open / not yet decided
+## D-024 — Retain FedAvg as the federated baseline
 
-Hyperparameters are **untuned defaults**, not search results. Capacity is held
-fixed at (64, 32) even though the centralized model sees ~7× the training data of
-any local model — this is an acknowledged confound in the local-vs-centralized
-comparison and is not yet resolved.
+**Status:** Decided · 2026-08-04
 
----
+**Decision:** Keep FedAvg as the reference federated method, not as the preferred
+predictive model.
 
-## D-019 — Skill score defined on MAE against same-hour-yesterday persistence
+**Why:** It performs close to but generally worse than centralized MLP, while
+local MLP wins on most clients, suggesting that one global model misses some
+station heterogeneity.
 
-**Status:** ✅ Decided (2026-08-02)
+**Evidence:** `results/fedavg_val.csv` and `results/baselines_val.csv`.
 
-### Decision
+**Boundary:** This motivates heterogeneity-aware methods but does not prove that
+personalization closes the gap; FedProx is interpreted under D-026.
 
-`skill = 1 − MAE(model) / MAE(persistence)`, where persistence is the
-`history_capacity_factor` feature (the realised capacity factor at T−24).
-Positive skill beats persistence; persistence scores exactly 0 by construction.
-MAE and RMSE are both reported, but skill is computed on MAE only.
+## D-025 — Select FedProx mu on validation
 
-### Evidence
+**Status:** Decided and implemented · 2026-08-04
 
-`src/solarfl/eval/metrics.py`. RMSE/MAE ratio by model (val, 2026-08-02):
+**Decision:** Evaluate `mu ∈ {0.001, 0.01, 0.1, 1.0}` and select the value with
+the lowest pooled validation MAE.
 
-- persistence: 1.46 – 1.63 (highest in almost every client row)
-- fitted models: 1.27 – 1.61
+**Why:** Proximal strength depends on client heterogeneity, so an arbitrary fixed
+value would not be defensible.
 
-Persistence has visibly fatter error tails. Defining skill on RMSE instead would
-raise every model's score — e.g. S1 MLP-local rises from 0.153 to 0.228.
+**Evidence:** `src/solarfl/federated/fedprox.py` and
+`results/fedprox_val.csv`.
 
----
+**Boundary:** FedProx receives four-way validation selection while FedAvg does
+not. Because improvements can be comparable to the 0.006–0.008 validation noise
+scale from D-020, validation superiority is exploratory. Nested validation was
+not used because of dataset size and project scope.
 
-## D-020 — Model selection on validation; test split untouched until protocol freeze
+## D-026 — Use FedProx as the second federated method
 
-**Status:** ✅ Decided (2026-08-02)
+**Status:** Decided and implemented · 2026-08-04
 
-### Decision
+**Decision:** Evaluate FedProx as the heterogeneity-aware extension to FedAvg,
+replacing the personalized-FL experiment proposed in D-013.
 
-All reported result tables — `results/baselines_val.csv`,
-`results/fedavg_val.csv`, and `results/fedprox_val.csv` — are computed on the
-**validation** split. The experiment runners load only train and validation
-features; the test split remains reserved for final evaluation. Early stopping
-and FedProx's μ selection use validation data.
+**Why:** FedProx changes only the local objective through a proximal penalty,
+allowing a controlled comparison with the existing aggregation pipeline.
 
-### Evidence
+**Evidence:** `src/solarfl/federated/fedprox.py`.
 
-The runners in `src/solarfl/models/baselines.py`,
-`src/solarfl/federated/fedavg.py`, and `src/solarfl/federated/fedprox.py` build
-only `train` and `val` features.
+**Boundary:** FedProx still returns one shared global model and is not
+personalized FL. FedPer, FedBN, and client-specific fine-tuning remain future
+work.
 
-### Known limitation
+## D-027 — Separate optimization and privacy claims
 
-Validation sets are small: 229–593 daylight rows per client (2,059 total). Because
-adjacent hours are correlated, the effective sample size is closer to the number
-of distinct days (~25 per client) than to the row count. An approximate paired
-standard error on a per-client MAE difference is therefore ~0.006–0.008, meaning
-**no individual local-vs-centralized gap in the current results is statistically
-conclusive.** The MLP `past` finding rests on the consistency of its sign
-(6/7 clients, median gap −0.0123), not on any single client's margin.
+**Status:** Decided · 2026-08-22
 
----
+**Decision:** RQ1 tests predictive non-inferiority without centrally pooling raw
+station rows. Differential privacy is a separate future RQ2 requiring an
+explicit privacy unit, adjacency relation, clipping rule, noise mechanism,
+accountant, and `(epsilon, delta)` guarantee.
 
-## D-021 — Hand-Rolled FedAvg Instead of Flower
+**Why:** Federated optimization alone does not protect model updates or shared
+statistics and therefore cannot substantiate a formal privacy claim.
 
-**Status:** ✅ Decided (2026-08-04)
+**Evidence:** Current FedAvg/FedProx and aggregate-scaling implementations.
 
-### Decision
+**Rejected:** Do not describe the current system as differentially private,
+secure aggregation, secure parameter exchange, or protected client updates.
 
-FedAvg was implemented directly in `fedavg.py` rather than using a federated learning framework such as Flower.
+## D-028 — Use E=1 for the primary comparison
 
-The implementation explicitly performs the standard FedAvg round:
+**Status:** Decided · 2026-08-22
 
-1. Broadcast the current global model to all clients.
-2. Train each client locally.
-3. Collect the updated model parameters (`state_dict`).
-4. Aggregate the client models using sample-count-weighted averaging.
-5. Evaluate the aggregated model on the pooled validation set.
-6. Apply early stopping and restore the best-performing model.
+**Decision:** Compare centralized MLP with full-participation FedAvg/FedProx at
+`E=1` for primary RQ1. Treat `E=5` as a secondary
+communication–computation experiment, comparing FedAvg E5 vs E1, FedProx E5 vs
+E1, and FedProx E5 vs FedAvg E5.
 
-### Rationale
+**Why:** One centralized epoch uses about 34 optimizer steps and one E=1 round
+uses about 32 client steps; E=5 performs roughly five times the local work per
+round and is not compute-matched.
 
-A hand-written implementation provides complete control over every stage of the algorithm and makes the implementation directly comparable with the existing centralized training loop.
+**Evidence:** Training-set sizes and runners in `src/solarfl/federated/`.
 
-Using Flower would introduce additional abstractions (client processes, communication APIs, server strategies) that are unnecessary for an offline simulation where all client datasets are already available locally. Since the goal of this study is algorithmic comparison rather than distributed deployment, a minimal implementation improves transparency and reproducibility.
+**Boundary:** E=5 cannot support equal-compute or communication-efficiency
+claims without round histories and a pre-specified performance threshold. It
+does not determine the primary non-inferiority result.
 
-#### Advantages
+## D-029 — Freeze a 0.005 non-inferiority margin
 
-- Every optimization step is visible and easy to inspect.
-- Training is directly comparable with the centralized baseline.
-- Easier experimentation with aggregation strategies, stopping criteria, and optimizer behavior.
-- Minimal implementation complexity.
+**Status:** Decided · 2026-08-22
 
-#### Limitations
+**Decision:** For FedProx E1 with validation-selected `mu=1` versus centralized
+MLP, define `D = macro-MAE_FedProx − macro-MAE_centralized`. Declare FedProx
+non-inferior only when the upper endpoint of its paired two-sided 95% confidence
+interval is strictly below `0.005`.
 
-- Does not model real network communication.
-- Does not support heterogeneous client availability or asynchronous updates.
-- Not directly deployable as a production federated learning system.
+**Why:** A margin of 0.005 is 0.5 percentage points of normalized capacity-factor
+MAE and about 4.5% of the centralized validation macro-MAE (~0.112). It was
+fixed before test evaluation.
 
----
+**Evidence:** D-030–D-031 and `results/test_evaluation_summary.csv`.
 
-## D-022 — Global Feature Scaling Using Aggregate Statistics
+**Boundary:** Crossing zero does not prevent non-inferiority; crossing 0.005
+makes the result inconclusive. The margin applies only to the primary
+past-weather E1 comparison and cannot be changed after observing test results.
 
-**Status:** ✅ Decided (2026-08-04)
+## D-030 — Average the final comparison across five seeds
 
-### Decision
+**Status:** Decided · 2026-08-23
 
-Reconstruct a global feature scaler using per-client aggregate statistics (`sum`, `sum_sq`, and `count`) rather than fitting the scaler on centrally collected data.
+**Decision:** Train centralized MLP and FedProx E1 (`mu=1`) with paired seeds
+`0, 1, 2, 3, 4`. For each seed compute its client-macro-MAE gap, then average
+the five gaps. Hold these ten fitted models fixed during bootstrap resampling.
 
-Each client shares only:
+**Why:** Paired fixed seeds reduce dependence on a favorable initialization
+without selecting a seed using test performance.
 
-- feature sums
-- feature squared sums
-- sample counts
+**Evidence:** `src/solarfl/eval/seed_robustness.py`,
+`src/solarfl/eval/test_evaluation.py`, and
+`results/test_evaluation_by_seed.csv`.
 
-The server reconstructs the **global mean** and **standard deviation** from these aggregates and distributes the resulting normalization parameters to all clients.
+**Rejected:** Best-seed selection is test leakage; seeds are not independent
+test sets; bootstrap retraining would estimate a different source of
+uncertainty.
 
-### Rationale
+## D-031 — Bootstrap paired complete calendar days
 
-This approach produces exactly the same normalization parameters as centralized preprocessing while ensuring that raw feature vectors never leave the client boundary.
+**Status:** Decided · 2026-08-23
 
-Using a common global scaler isolates the effect of federated optimization from differences in preprocessing. Consequently, any performance differences between FedAvg and the centralized MLP arise from the training procedure rather than inconsistent feature normalization.
+**Decision:** Match centralized and FedProx errors by client, timestamp, and
+seed; resample complete calendar dates with replacement across all clients and
+seeds; run 10,000 repetitions with RNG seed 0; and report the 2.5th and 97.5th
+percentiles. Compute unweighted client-macro-MAE per seed before the five-seed
+average. Timestamps are timezone-naive and are not converted.
 
-#### Advantages
+**Why:** Pairing removes condition mismatch, while date blocks preserve
+within-day weather and solar-cycle dependence.
 
-- Identical preprocessing to the centralized baseline.
-- No raw training samples are transmitted.
-- Communication cost is extremely small.
-- Fair comparison between centralized and federated training.
+**Evidence:** `src/solarfl/eval/test_evaluation.py` and
+`results/test_evaluation_bootstrap.csv`.
 
-#### Limitations
+**Rejected:** Hour-level resampling breaks temporal dependence; independent
+method resampling breaks pairing; a normal-theory interval assumes an
+unsupported distribution. The two-sided 95% rule remains as frozen.
 
-Although substantially more privacy-preserving than sharing raw data, aggregate statistics still cross the client boundary and therefore represent a small relaxation compared with a fully local preprocessing pipeline.
+## D-032 — Use portable provenance in the split manifest
 
----
+**Status:** Decided · 2026-09-04
 
-## D-023 — FedAvg Configuration
+**Decision:** Set `configs/splits.json` source to the versioned Mendeley DOI.
+Pin the exact source file separately by file ID and SHA-256 in
+`data/README.md` and `scripts/prepare_data.py`.
 
-**Status:** ✅ Decided (2026-08-04)
+**Why:** A DOI identifies the public source independently of any researcher’s
+checkout; the file ID and checksum identify its exact bytes.
 
-### Decision
+**Evidence:** `configs/splits.json`, `data/README.md`, and
+`scripts/prepare_data.py`.
 
-The following configuration was adopted:
+**Rejected:** Absolute paths are machine-specific; relative paths describe only
+local placement. This metadata correction did not regenerate or otherwise
+change the frozen splits.
 
-- Full client participation every communication round.
-- One local epoch per communication round (`local_epochs = 1`).
-- Adam optimizer recreated independently for every client and every communication round.
-- **Sample-count-weighted** model aggregation.
-- Early stopping using pooled validation MAE with patience measured in communication rounds.
+## Resolved questions
 
-### Rationale
+- **Q-001 — Forecast horizon:** resolved by D-012 (`H=24`).
+- **Q-002 — Meaning of `terrestrial_radiation`:** verified from the data as
+  top-of-atmosphere solar radiation on a horizontal surface, not terrestrial
+  infrared. Night mean is 0.1 W/m² (97.4% zero); daylight mean is 597.2 W/m²,
+  consistent with `1361 × cos(zenith)` near 41.5°N. It is retained for deriving
+  `kt` and excluded from direct model inputs.
 
-Using one local epoch per round makes each communication round perform approximately the same amount of gradient computation as one centralized training epoch. This enables direct comparison of training budgets between centralized and federated learning.
+## Protocol freeze
 
-Recreating the Adam optimizer each round treats clients as stateless, preventing optimizer moments from becoming inconsistent after the server replaces model parameters with the aggregated global model.
-
-Sample-count weighting follows the original FedAvg algorithm and gives larger datasets proportionally greater influence on the global model.
-
-Monitoring pooled validation MAE mirrors the centralized baseline (D-018), ensuring identical model-selection criteria.
-
-### Consequences
-
-#### Advantages
-
-- Fair comparison with centralized training.
-- Configuration closely follows the original FedAvg algorithm.
-- Minimal implementation complexity.
-- Easy to reproduce.
-
-#### Limitations
-
-Several common federated learning variants remain unexplored:
-
-- Partial client participation
-- Uniform client weighting
-- Alternative aggregation methods
-- Client-specific validation or decentralized stopping criteria
-
-These remain possible directions for future work.
-
-Multiple local epochs (`E = 5`) were subsequently explored in the FedProx
-experiment, with a like-for-like FedAvg control at the same E (D-025–D-026).
-
----
-
-## D-024 — Interpretation of FedAvg Results
-
-**Status:** ✅ Decided (2026-08-04)
-
-### Context
-
-FedAvg was evaluated against the centralized MLP, local MLP, and persistence baselines using the same validation protocol.
-
-### Decision
-
-FedAvg is retained as the representative federated baseline but is **not** adopted as the preferred predictive model.
-
-### Rationale
-
-FedAvg consistently performs close to, but slightly worse than, the centralized
-MLP, while the local MLP achieves the best performance on most clients. This
-suggests that a single shared global model does not capture all client-specific
-characteristics. It motivates testing personalization, but the current
-experiments do not establish that personalization solves the gap.
-
-### Consequence
-
-FedAvg remains the federated reference implementation. FedProx is evaluated as
-a robustness extension for heterogeneous clients; genuinely personalized FL is
-deferred (D-026).
-
-## D-025 — Hyperparameter Selection Protocol for FedProx
-
-**Status:** ✅ Decided and implemented (2026-08-04)
-
-## Context
-
-FedProx introduces a new hyperparameter, **μ (proximal coefficient)**, which controls the strength of the proximal regularization term. Unlike FedAvg, which has no equivalent parameter, FedProx requires selecting an appropriate μ before evaluation.
-
-The implementation evaluates four candidate values:
-
-```text
-μ ∈ {0.001, 0.01, 0.1, 1.0}
-```
-
-The value with the lowest pooled validation MAE is selected.
-
----
-
-## Decision
-
-FedProx uses a grid search over the predefined μ values and selects the configuration that minimizes pooled validation MAE.
-
-The selected model is then used for reporting validation performance.
-
----
-
-## Rationale
-
-The original FedProx paper recommends tuning μ because the optimal regularization strength depends on the degree of statistical heterogeneity between clients.
-
-Using a fixed μ without tuning would make the evaluation dependent on an arbitrary implementation choice.
-
----
-
-## Consequences
-
-This protocol introduces an important limitation.
-
-Unlike FedAvg, which is evaluated once, FedProx is evaluated four times and the best-performing configuration is selected on the same validation data that is later reported.
-
-Consequently, FedProx benefits from model selection while FedAvg does not.
-
-Given that previous experiments (D-020) established a validation noise floor of approximately **0.006–0.008 MAE**, and the observed improvements are of similar or smaller magnitude, the reported gains should be interpreted as exploratory rather than definitive evidence that FedProx outperforms FedAvg.
-
-A cleaner protocol would reserve an independent validation set for hyperparameter tuning and evaluate the selected μ on unseen data.
-
----
-
-## Alternatives Considered
-
-- **Fix μ without tuning** — Rejected because the choice becomes arbitrary.
-- **Nested validation** — Preferred statistically, but not adopted due to dataset size and project scope.
-
-## D-026 — Selection of FedProx as the Federated Learning Extension
-
-**Status:** ✅ Decided and implemented (2026-08-04)
-
-## Context
-
-Earlier planning (D-013) proposed evaluating a personalized federated learning method alongside FedAvg, motivated by large performance differences between individual photovoltaic stations.
-
-During implementation, FedProx was selected instead.
-
----
-
-## Decision
-
-FedProx was implemented as the second federated learning algorithm in place of a personalized federated learning approach.
-
----
-
-## Rationale
-
-FedProx is a widely used extension of FedAvg that directly addresses statistical heterogeneity through a proximal regularization term while preserving the same server aggregation procedure.
-
-Its implementation requires only a modification of the client's local objective function, allowing direct comparison with the existing FedAvg baseline while minimizing changes to the experimental pipeline.
-
----
-
-## Consequences
-
-FedProx is **not** a personalized federated learning algorithm.
-
-All clients continue to share a single global model after every communication round.
-
-Therefore, FedProx cannot be expected to specialize models for individual photovoltaic stations.
-
-This distinction is important because earlier experiments showed that independently trained local models outperform global federated models for several highly heterogeneous stations.
-
-Consequently, FedProx should be interpreted as a robustness improvement over FedAvg rather than as a solution to personalization.
-
-Future work should evaluate genuinely personalized federated learning methods such as **FedPer**, **FedBN**, or **client-specific fine-tuning**.
-
----
-
-## Alternatives Considered
-
-- **Personalized federated learning methods (FedPer, FedBN, client-specific fine-tuning)** — Deferred due to project scope and implementation complexity.
-- **FedAvg only** — Rejected because the objective of this phase was to investigate an approach that explicitly addresses client heterogeneity.
-
----
-
-## D-027 — Research questions and privacy-claim boundary
-
-**Status:** ✅ Decided (2026-08-22)
-
-### Context
-
-The original research question combined predictive comparability with a broad
-claim about preserving station privacy. Federated learning prevents raw station
-observations from being centrally pooled, but that property alone is not a
-formal privacy guarantee: model updates and shared aggregate statistics may
-still disclose information.
-
-### Decision
-
-The primary research question is:
-
-> **RQ1:** Can federated learning achieve forecasting performance comparable to
-> centralized training without pooling raw station observations?
-
-Comparability will be evaluated as non-inferiority. The acceptable margin,
-primary metric, selected model configurations, and statistical procedure must
-be fixed before evaluating the untouched test split.
-
-An additional research direction is:
-
-> **RQ2:** How does adding differential privacy to federated training affect the
-> privacy–utility trade-off under explicitly stated privacy budgets?
-
-The current experimental focus is RQ1 and does not implement differential
-privacy. Results from the current FedAvg and FedProx pipelines may claim that
-raw observations are not centrally pooled, but may not claim formal privacy,
-secure parameter exchange, or protection of individual client updates.
-
-### Rationale
-
-Separating the questions isolates the effect of federated optimization from the
-effect of clipping and privacy noise. It also makes the present claim match what
-the implementation actually demonstrates while retaining differential privacy
-as a separately measurable privacy–utility question.
-
-### Consequences
-
-- RQ1 remains the main focus of the current experiment and final test protocol.
-- A non-inferiority margin is required before "comparable" can support a
-  confirmatory conclusion.
-- Privacy claims must identify the mechanism and threat model; federated
-  learning alone is not evidence of differential privacy.
-- Any differential-privacy experiment must report its privacy unit, adjacency
-  definition, clipping rule, noise mechanism, accountant, and final
-  `(epsilon, delta)` guarantee.
-
----
-
-## D-028 — E=1 primary comparison; E=5 communication–computation analysis
-
-**Status:** ✅ Decided (2026-08-22)
-
-### Context
-
-The centralized MLP processes the pooled training data once per epoch. With
-full client participation, one federated round at `local_epochs = 1` processes
-each client's training data once before aggregation. Their data exposure and
-optimizer-step counts are therefore approximately comparable: the current
-training data produces about 34 centralized optimizer steps per epoch and 32
-federated client optimizer steps per E=1 round.
-
-At `local_epochs = 5`, clients process their local data five times before each
-aggregation. One E=5 round therefore performs about five times as much local
-computation as one E=1 round while still using one communication round. Because
-early-stopping patience is also measured in rounds, E=5 is not compute-matched
-to the centralized MLP under the current limits.
-
-### Decision
-
-The primary RQ1 non-inferiority analysis will compare the centralized MLP with
-full-participation FedAvg and FedProx at `E = 1`. This is the approximately
-compute-matched centralized–federated comparison.
-
-The `E = 5` configurations will be reported as a secondary
-communication–computation trade-off experiment. Their principal comparisons
-are:
-
-1. FedAvg E=5 versus FedAvg E=1 — effect of increased local training.
-2. FedProx E=5 versus FedProx E=1 — effect of increased local training under
-   proximal regularization.
-3. FedProx E=5 versus FedAvg E=5 — like-for-like comparison under the same E=5
-   federated budget.
-
-Centralized performance may appear beside E=5 for predictive context, but E=5
-will not be used to support the primary compute-matched non-inferiority claim.
-
-### Rationale
-
-This separation answers two distinct questions without discarding the E=5
-experiment. E=1 isolates centralized versus federated training under similar
-data exposure. E=5 tests whether additional client computation between server
-aggregations changes performance and whether FedProx helps under the greater
-opportunity for client drift.
-
-### Claim boundaries
-
-- E=5 is not evidence of superior performance under equal computation.
-- Using more local epochs does not by itself demonstrate communication
-  efficiency.
-- A communication-efficiency claim requires round histories and a predefined
-  criterion, such as the number of rounds required to reach a specified
-  validation MAE.
-- If round histories are not available, describe E=5 only as a
-  communication–computation configuration or trade-off experiment.
-- All E=5 statistical comparisons are secondary; the predefined
-  non-inferiority margin applies to the primary E=1 centralized–federated
-  comparison.
-
-### Alternatives considered
-
-- **Use validation-selected E=5 as the primary federated model** — rejected
-  because its larger local-computation budget would confound the primary
-  centralized–federated comparison.
-- **Discard E=5** — rejected because it provides useful evidence about local
-  computation between aggregations and FedProx under increased client drift.
-- **Reduce E=5 to 60 maximum rounds to approximate 300 local epochs** — not
-  adopted because this would constitute a new training protocol and would also
-  require reconsidering early-stopping patience.
-
----
-
-## D-029 — Primary non-inferiority margin fixed at 0.005 macro-MAE
-
-**Status:** ✅ Decided (2026-08-22)
-
-### Decision
-
-The primary RQ1 comparison is FedProx E=1 with validation-selected `mu = 1`
-versus the centralized MLP. Define the paired performance difference as:
-
-`D = MAE_FedProx - MAE_centralized`
-
-The absolute non-inferiority margin is frozen at:
-
-`delta = 0.005 macro-MAE`
-
-FedProx will be declared non-inferior only if the upper bound of the paired 95%
-confidence interval for `D` is strictly below 0.005. Crossing zero does not
-prevent non-inferiority, but crossing 0.005 makes the result inconclusive.
-
-### Rationale
-
-Capacity factor is normalized to `[0, 1]`, so 0.005 represents 0.5 percentage
-points of capacity-factor MAE. Relative to the five-seed centralized validation
-macro-MAE of approximately 0.112, it corresponds to about 4.5%, providing a
-small and interpretable maximum forecasting penalty for avoiding central
-pooling of raw station observations.
-
-Validation performance demonstrates that this margin is plausible but is not
-the reason for selecting it. The value is fixed before test evaluation and may
-not be changed in response to test results.
-
-### Claim boundaries
-
-- The margin applies only to the primary past-weather, E=1 comparison.
-- FedAvg E=1 and all E=5 analyses remain secondary.
-- Failure to detect a statistically significant difference is not evidence of
-  non-inferiority; the confidence interval must satisfy the stated decision
-  rule.
-- Sensitivity analyses may show other margins, but the headline conclusion must
-  use 0.005.
-
----
-
-## D-030 — Five-seed policy for the final test comparison
-
-**Status:** ✅ Decided (2026-08-23)
-
-### Decision
-
-The final RQ1 test comparison will train the centralized MLP and FedProx E=1
-(`mu = 1`) with the fixed training seeds `0, 1, 2, 3, 4`. For each seed, both
-methods use the same seed number. The primary estimate is the arithmetic mean
-of the five seed-specific macro-MAE gaps:
-
-`D_seed = macro-MAE_FedProx,seed - macro-MAE_centralized,seed`.
-
-The models are not retrained inside the bootstrap. The five fitted realizations
-are held fixed, every bootstrap resample is applied to all five seeds, and the
-resulting five paired gaps are averaged within that repetition.
-
-### Rationale
-
-Neural-network training is stochastic, so a conclusion based on one seed could
-reflect a favorable or unfavorable initialization. Using the five seeds already
-examined on validation makes the final comparison less seed-specific without
-allowing the test result to select a seed. Applying the same sampled dates to
-all seeds keeps test-period variation aligned across the five comparisons.
-
-### Ruled out
-
-- Selecting the best seed after test evaluation — rejected as test leakage.
-- Treating the five seeds as five independent test datasets — rejected because
-  every seed is evaluated on the same observations.
-- Retraining models inside each bootstrap repetition — rejected because D-031
-  targets uncertainty from the sampled test days, not the distribution of all
-  possible future training runs.
-
----
-
-## D-031 — Paired complete-day bootstrap for final non-inferiority
-
-**Status:** ✅ Decided (2026-08-23)
-
-### Decision
-
-Uncertainty for the primary test gap will use a paired block bootstrap with:
-
-- complete calendar dates as resampling units;
-- all available clients and retained hourly observations on a selected date
-  kept together;
-- centralized and FedProx errors matched by client, timestamp, and training
-  seed;
-- the same resampled dates applied to both methods and all seeds;
-- `10,000` bootstrap repetitions using bootstrap RNG seed `0`;
-- a two-sided `95%` percentile interval, using the empirical 2.5th and 97.5th
-  percentiles;
-- macro-MAE computed as the unweighted mean of per-client MAEs in each seed,
-  followed by the D-030 average of the five seed-specific gaps.
-
-Calendar dates are derived directly from `measured_ts`. The source timestamps
-are timezone-naive, so the evaluation performs no timezone conversion. FedProx
-is declared non-inferior only when the interval's upper endpoint is strictly
-below the frozen `0.005` margin from D-029.
-
-### Rationale
-
-Centralized and FedProx predictions concern the same station-hours, so pairing
-removes variation caused merely by evaluating the methods under different
-conditions. Hourly PV errors within a day can share weather, solar-cycle, and
-system-state effects; resampling complete dates preserves this within-day
-dependence instead of treating every hour as independent. Ten thousand draws
-provide stable percentile estimates while seed `0` makes the Monte Carlo
-calculation reproducible.
-
-### Ruled out
-
-- Resampling individual hours — rejected because it breaks within-day temporal
-  dependence.
-- Resampling the two methods independently — rejected because it breaks the
-  matched comparison.
-- A normal-theory interval — rejected because the day-level sampling
-  distribution need not be Gaussian.
-- A 95% one-sided bound or 90% two-sided interval — not selected; the frozen
-  rule deliberately uses the more conservative upper endpoint of a two-sided
-  95% interval.
-
----
-
-## 4. Open — blocking
-
-Question · why it blocks · what would resolve it · which notebook owns it
-
-## 5. Open — deferred
-
-### Q-001: Resolved - See D-012
-
-### Q-002 · RESOLVED — terrestrial_radiation is top-of-atmosphere solar
-
-Night: mean 0.1 W/m², 97.4% exactly zero.  
-Day: mean 597.2 W/m², matching
-1361 × cos(zenith) at 41.5°N (~600).  
-The paper's description ("infrared
-emitted by Earth's surface") is incorrect; the column is extraterrestrial
-solar radiation on the horizontal.
-Unblocks kt (clearness index). Both terrestrial_radiation and
-shortwave_radiation retained in `load` as kt inputs, excluded from `features`.
-Note for writeup: column semantics verified against data, not the source
-publication.
-
-## 6. Protocol freeze
-
-The date after which splits, features, metrics and seeds stop changing.
-Everything below that line ran under a fixed protocol.
+D-029–D-031 define the pre-test primary comparison, margin, seed policy, and
+uncertainty procedure. The final test outputs in `results/test_evaluation_*.csv`
+were produced under that fixed protocol. Any future change must receive a new
+decision entry and must not retroactively alter the archived claim.

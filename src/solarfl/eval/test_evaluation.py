@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -37,7 +38,6 @@ DETAIL_PATH = ROOT / "results/test_evaluation_detail.csv"
 BY_SEED_PATH = ROOT / "results/test_evaluation_by_seed.csv"
 BOOTSTRAP_PATH = ROOT / "results/test_evaluation_bootstrap.csv"
 SUMMARY_PATH = ROOT / "results/test_evaluation_summary.csv"
-OUTPUT_PATHS = (DETAIL_PATH, BY_SEED_PATH, BOOTSTRAP_PATH, SUMMARY_PATH)
 
 
 def _clip(prediction: np.ndarray) -> np.ndarray:
@@ -168,8 +168,15 @@ def _load_test_data(client_order: list[str]) -> dict:
     }
 
 
-def run() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    existing = [path for path in OUTPUT_PATHS if path.exists()]
+def run(
+    output_dir: Path = ROOT / "results",
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    detail_path = output_dir / DETAIL_PATH.name
+    by_seed_path = output_dir / BY_SEED_PATH.name
+    bootstrap_path = output_dir / BOOTSTRAP_PATH.name
+    summary_path = output_dir / SUMMARY_PATH.name
+    output_paths = (detail_path, by_seed_path, bootstrap_path, summary_path)
+    existing = [path for path in output_paths if path.exists()]
     if existing:
         raise FileExistsError(
             "refusing to repeat the one-shot test evaluation because output "
@@ -289,11 +296,11 @@ def run() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     # Delay every write until the complete evaluation has succeeded, so the
     # output guard cannot mistake a partial run for a completed one.
-    DETAIL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    detail.to_csv(DETAIL_PATH, index=False)
-    by_seed.to_csv(BY_SEED_PATH, index=False)
-    bootstrap.to_csv(BOOTSTRAP_PATH, index=False)
-    summary.to_csv(SUMMARY_PATH, index=False)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    detail.to_csv(detail_path, index=False)
+    by_seed.to_csv(by_seed_path, index=False)
+    bootstrap.to_csv(bootstrap_path, index=False)
+    summary.to_csv(summary_path, index=False)
     return detail, by_seed, bootstrap, summary
 
 
@@ -303,18 +310,19 @@ def main() -> None:
         "--smoke", action="store_true",
         help="benchmark bootstrap mechanics on synthetic data only",
     )
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "results")
     args = parser.parse_args()
     if args.smoke:
         timings = smoke_benchmark()
         print(timings.to_string(index=False))
         return
 
-    _, by_seed, _, summary = run()
+    _, by_seed, _, summary = run(args.output_dir)
     print("\n=== Test macro-MAE by training seed ===")
     print(by_seed.to_string(index=False))
     print("\n=== Frozen non-inferiority result ===")
     print(summary.to_string(index=False))
-    print(f"\nsummary -> {SUMMARY_PATH}")
+    print(f"\nsummary -> {args.output_dir / SUMMARY_PATH.name}")
 
 
 if __name__ == "__main__":

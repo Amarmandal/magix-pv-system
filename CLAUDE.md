@@ -95,8 +95,8 @@ Notebooks decide; modules execute. Anything that runs more than once belongs in
 
 ## Commands
 
-<!-- fill these in and delete this comment -->
-
-- Install: `uv sync`
+- Install: `uv sync --locked`
+- Prepare data: `uv run python scripts/prepare_data.py --download`
 - Run a module: `uv run python -m solarfl.<module>`
 - Import check: `uv run python -c "import solarfl"`
+- Full reproduction: follow `REPRODUCIBILITY.md`
