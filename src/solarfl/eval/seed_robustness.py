@@ -8,6 +8,9 @@ Run: uv run python -m solarfl.eval.seed_robustness
 
 from __future__ import annotations
 
+import argparse
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -32,7 +35,12 @@ def _clip(pred: np.ndarray) -> np.ndarray:
     return np.clip(pred, 0.0, 1.0)
 
 
-def run() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def run(
+    output_dir: Path = ROOT / "results",
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    detail_path = output_dir / DETAIL_PATH.name
+    by_seed_path = output_dir / BY_SEED_PATH.name
+    summary_path = output_dir / SUMMARY_PATH.name
     data = {
         sid: {split: build_features(sid, split=split)
               for split in ("train", "val")}
@@ -127,19 +135,22 @@ def run() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         })
     summary = pd.DataFrame(summary_rows).sort_values("macro_mae_mean")
 
-    DETAIL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    detail.to_csv(DETAIL_PATH, index=False)
-    by_seed.to_csv(BY_SEED_PATH, index=False)
-    summary.to_csv(SUMMARY_PATH, index=False)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    detail.to_csv(detail_path, index=False)
+    by_seed.to_csv(by_seed_path, index=False)
+    summary.to_csv(summary_path, index=False)
     return detail, by_seed, summary
 
 
 if __name__ == "__main__":
-    _, by_seed, summary = run()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "results")
+    args = parser.parse_args()
+    _, by_seed, summary = run(args.output_dir)
     print("\n=== Macro MAE and gap versus centralized, by seed ===")
     print(by_seed.round(6).to_string(index=False))
     print("\n=== Five-seed validation summary ===")
     print(summary.round(6).to_string(index=False))
-    print(f"\ndetail -> {DETAIL_PATH}")
-    print(f"by seed -> {BY_SEED_PATH}")
-    print(f"summary -> {SUMMARY_PATH}")
+    print(f"\ndetail -> {args.output_dir / DETAIL_PATH.name}")
+    print(f"by seed -> {args.output_dir / BY_SEED_PATH.name}")
+    print(f"summary -> {args.output_dir / SUMMARY_PATH.name}")

@@ -14,6 +14,9 @@ Run: uv run python -m solarfl.models.baselines
 
 from __future__ import annotations
 
+import argparse
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import Ridge
@@ -54,7 +57,8 @@ def _clip(pred: np.ndarray) -> np.ndarray:
     return np.clip(pred, 0.0, 1.0)
 
 
-def run() -> pd.DataFrame:
+def run(output_dir: Path = ROOT / "results") -> pd.DataFrame:
+    output_path = output_dir / RESULTS_PATH.name
     data = _load_all()
     labels = station_labels()
     rows = []
@@ -102,13 +106,16 @@ def run() -> pd.DataFrame:
                 })
 
     results = pd.DataFrame(rows).sort_values(["variant", "client", "model", "regime"])
-    RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    results.to_csv(RESULTS_PATH, index=False)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    results.to_csv(output_path, index=False)
     return results
 
 
 if __name__ == "__main__":
-    results = run()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "results")
+    args = parser.parse_args()
+    results = run(args.output_dir)
     for variant in VARIANTS:
         sub = results[results["variant"] == variant]
         pivot = sub.pivot_table(index="client", columns=["model", "regime"],
@@ -120,4 +127,4 @@ if __name__ == "__main__":
                                   values="skill", sort=False)
         print("\nskill (>0 beats persistence):")
         print(pivot_s.round(3).to_string())
-    print(f"\nfull table -> {RESULTS_PATH}")
+    print(f"\nfull table -> {args.output_dir / RESULTS_PATH.name}")

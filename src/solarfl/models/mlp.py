@@ -1,9 +1,8 @@
 """Small torch MLP for day-ahead capacity-factor regression.
 
 Torch rather than sklearn's MLPRegressor because the federated stage (D-013)
-needs explicit weight access for FedAvg, and Flower's standard client wraps a
-torch state_dict. Centralized, local, and federated runs must share this one
-model class or the comparison is confounded by architecture.
+needs explicit weight access for FedAvg. Centralized, local, and federated runs
+must share this one model class or the comparison is confounded by architecture.
 """
 
 from __future__ import annotations

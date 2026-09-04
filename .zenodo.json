@@ -1,0 +1,32 @@
+{
+  "title": "SolarFL: Federated PV Forecasting",
+  "description": "Reproducible experiments comparing local, centralized, FedAvg, and FedProx models for 24-hour-ahead photovoltaic capacity-factor forecasting across seven stations in North Macedonia.",
+  "upload_type": "software",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Mandal, Amar Kumar",
+      "affiliation": "Kadir Has University, Istanbul, Turkey"
+    },
+    {
+      "name": "Chaudhary, Yuvraj",
+      "affiliation": "Department of Chemical and Biological Engineering, Friedrich Alexander University Erlangen-Nuremberg, Germany"
+    }
+  ],
+  "keywords": [
+    "federated learning",
+    "photovoltaic forecasting",
+    "time-series forecasting",
+    "FedAvg",
+    "FedProx",
+    "North Macedonia"
+  ],
+  "related_identifiers": [
+    {
+      "scheme": "doi",
+      "identifier": "10.17632/4zgsckxpdy.2",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Data Dictionary — SolarMagix
 
-**Dataset:** `hourly_pv_weather_stations.csv`
+**Dataset:** `hourly_pv_weather_station.csv`
 
 | Column                           | Type     | Description                                  | Role       |
 | -------------------------------- | -------- | -------------------------------------------- | ---------- |

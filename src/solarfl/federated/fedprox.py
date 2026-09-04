@@ -27,7 +27,9 @@ Run: uv run python -m solarfl.federated.fedprox
 
 from __future__ import annotations
 
+import argparse
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -210,7 +212,8 @@ def _clip(pred: np.ndarray) -> np.ndarray:
     return np.clip(pred, 0.0, 1.0)
 
 
-def run() -> pd.DataFrame:
+def run(output_dir: Path = ROOT / "results") -> pd.DataFrame:
+    output_path = output_dir / RESULTS_PATH.name
     data = {
         sid: {s: build_features(sid, split=s) for s in ("train", "val")}
         for sid in client_ids()
@@ -277,13 +280,16 @@ def run() -> pd.DataFrame:
 
     results = pd.DataFrame(rows).sort_values(
         ["variant", "local_epochs", "regime", "client"])
-    RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    results.to_csv(RESULTS_PATH, index=False)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    results.to_csv(output_path, index=False)
     return results
 
 
 if __name__ == "__main__":
-    results = run()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "results")
+    args = parser.parse_args()
+    results = run(args.output_dir)
     for variant in VARIANTS:
         for local_epochs in LOCAL_EPOCHS:
             sub = results[(results["variant"] == variant)
@@ -293,4 +299,4 @@ if __name__ == "__main__":
                   f"variant = {variant}, E = {local_epochs} ===")
             print(sub.set_index(["regime", "client"])
                   [["n_val", "mae", "rmse", "skill"]].round(4).to_string())
-    print(f"\nfull table -> {RESULTS_PATH}")
+    print(f"\nfull table -> {args.output_dir / RESULTS_PATH.name}")

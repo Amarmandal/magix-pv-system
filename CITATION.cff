@@ -1,0 +1,64 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite the software release and the associated
+  manuscript.
+type: software
+title: "SolarFL: Federated PV Forecasting"
+abstract: >-
+  Reproducible experiments comparing local, centralized, FedAvg, and FedProx
+  models for 24-hour-ahead photovoltaic capacity-factor forecasting across
+  seven stations in North Macedonia.
+authors:
+  - family-names: Mandal
+    given-names: Amar Kumar
+    email: amarkumar.mandal@stu.khas.edu.tr
+    affiliation: Kadir Has University, Istanbul, Turkey
+  - family-names: Chaudhary
+    given-names: Yuvraj
+    email: yuvraj.chaudhary@fau.de
+    affiliation: >-
+      Department of Chemical and Biological Engineering, Friedrich Alexander
+      University Erlangen-Nuremberg, 91058 Erlangen, Germany
+version: 1.0.0
+license: MIT
+repository-code: https://github.com/Amarmandal/magix-internship
+keywords:
+  - federated learning
+  - photovoltaic forecasting
+  - time-series forecasting
+  - FedAvg
+  - FedProx
+preferred-citation:
+  type: article
+  title: >-
+    Localized versus Pooled Station Data in Time-Series Forecasting of PV Power
+    Generation: A Case Study in North Macedonia
+  authors:
+    - family-names: Mandal
+      given-names: Amar Kumar
+      email: amarkumar.mandal@stu.khas.edu.tr
+      affiliation: Kadir Has University, Istanbul, Turkey
+    - family-names: Chaudhary
+      given-names: Yuvraj
+      email: yuvraj.chaudhary@fau.de
+      affiliation: >-
+        Department of Chemical and Biological Engineering, Friedrich Alexander
+        University Erlangen-Nuremberg, 91058 Erlangen, Germany
+    - family-names: Zdravevski
+      given-names: Eftim
+      affiliation: >-
+        Faculty of Computer Science and Engineering, Ss. Cyril and Methodius
+        University, Rugjer Boshkovik 16, Skopje, North Macedonia
+  year: 2026
+references:
+  - type: data
+    title: >-
+      Dataset for unified photovoltaic-weather multi-station analysis in North
+      Macedonia
+    authors:
+      - family-names: Daskalov
+        given-names: Andrej
+      - family-names: Zdravevski
+        given-names: Eftim
+    doi: 10.17632/4zgsckxpdy.2
+    year: 2026

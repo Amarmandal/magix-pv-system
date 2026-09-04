@@ -8,7 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
+.claude/
 
-/data/
+# Source data are downloaded separately; keep their instructions in Git.
+/data/*
+!/data/README.md
 
 .DS_Store
+.ipynb_checkpoints/
+reproduced-results/
