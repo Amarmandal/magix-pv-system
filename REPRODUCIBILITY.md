@@ -7,7 +7,7 @@ modules under `src/solarfl/` are the authoritative experiment implementation.
 
 ## Scope
 
-The reproducibility target is the set of eleven CSV files listed in
+The reproducibility target is the set of twelve CSV files listed in
 `results/SHA256SUMS`. PNG and PDF figures are derived from those tables by
 `notebooks/07_results-figures.ipynb` and
 `notebooks/08_test_results_figures.ipynb`.
@@ -75,7 +75,20 @@ reanalysis so exploratory past/perfect-weather comparisons remain paired. The
 audit reports whether that additional availability requirement excludes any
 otherwise eligible Variant-A timestamps.
 
-## 5. Regenerate the experiment tables
+## 5. Generate the margin-sensitivity table
+
+```bash
+uv run python -m solarfl.eval.margin_sensitivity \
+  --summary results/test_evaluation_summary.csv \
+  --output reproduced-results/noninferiority_margin_sensitivity.csv
+```
+
+This post-hoc appendix analysis reuses the frozen confidence-interval upper
+bound and checks the decision at margins from 0 to 0.010. It does not retrain
+models, rerun the bootstrap, or replace the pre-specified primary margin of
+`0.005`.
+
+## 6. Regenerate the experiment tables
 
 Write regenerated outputs to a new directory. This preserves the archived
 tables and the one-shot test guard.
@@ -93,7 +106,7 @@ steps. Record the machine description and elapsed time when reporting an
 independent reproduction, for example with `/usr/bin/time -p` before each
 command.
 
-## 6. Compare with the archive
+## 7. Compare with the archive
 
 ```bash
 uv run python scripts/verify_results.py --candidate reproduced-results
@@ -114,6 +127,10 @@ The frozen test summary reports:
 - paired 95% bootstrap interval: `[-0.009926, -0.000537]`
 - non-inferiority margin: `0.005`
 - decision: FedProx is non-inferior under the pre-specified rule
+
+The post-hoc appendix sensitivity table reports the same decision for all
+examined non-negative margins from `0` to `0.010`; `0.005` remains the sole
+pre-specified primary margin.
 
 ## Reproducibility boundaries
 
