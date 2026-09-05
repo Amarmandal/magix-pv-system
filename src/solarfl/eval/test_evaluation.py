@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from solarfl.data.features import MODEL_MATRIX, ROOT, build_features
+from solarfl.data.features import PAST_MODEL_MATRIX, ROOT, build_features
 from solarfl.data.splits import client_ids
 from solarfl.eval.metrics import mae, rmse, skill
 from solarfl.federated.fedprox import fit_fedprox
@@ -32,7 +32,7 @@ BOOTSTRAP_REPETITIONS = 10_000
 BOOTSTRAP_SEED = 0
 CONFIDENCE_LEVEL = 0.95
 NONINFERIORITY_MARGIN = 0.005
-COLS = [c for c in MODEL_MATRIX if not c.startswith("weather_future_")]
+COLS = PAST_MODEL_MATRIX
 
 DETAIL_PATH = ROOT / "results/test_evaluation_detail.csv"
 BY_SEED_PATH = ROOT / "results/test_evaluation_by_seed.csv"
@@ -154,7 +154,7 @@ def smoke_benchmark() -> pd.DataFrame:
 def _load_development_data() -> dict:
     """Load train/validation only; test is deliberately loaded later."""
     return {
-        sid: {split: build_features(sid, split=split)
+        sid: {split: build_features(sid, split=split, row_set="past")
               for split in ("train", "val")}
         for sid in client_ids()
     }
@@ -163,7 +163,9 @@ def _load_development_data() -> dict:
 def _load_test_data(client_order: list[str]) -> dict:
     """Open the frozen test partitions only after all model fits are complete."""
     return {
-        sid: build_features(sid, split="test", return_timestamps=True)
+        sid: build_features(
+            sid, split="test", row_set="past", return_timestamps=True
+        )
         for sid in client_order
     }
 

@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from solarfl.data.features import MODEL_MATRIX, ROOT, build_features
+from solarfl.data.features import PAST_MODEL_MATRIX, ROOT, build_features
 from solarfl.data.splits import client_ids
 from solarfl.eval.metrics import mae, rmse, skill
 from solarfl.federated.fedavg import fit_fedavg
@@ -24,7 +24,7 @@ from solarfl.models.mlp import fit_mlp
 
 SEEDS = (0, 1, 2, 3, 4)
 FEDPROX_MU = 1.0  # selected for past/E=1 on validation in D-025
-COLS = [c for c in MODEL_MATRIX if not c.startswith("weather_future_")]
+COLS = PAST_MODEL_MATRIX
 
 DETAIL_PATH = ROOT / "results/seed_robustness_val.csv"
 BY_SEED_PATH = ROOT / "results/seed_robustness_by_seed_val.csv"
@@ -42,7 +42,7 @@ def run(
     by_seed_path = output_dir / BY_SEED_PATH.name
     summary_path = output_dir / SUMMARY_PATH.name
     data = {
-        sid: {split: build_features(sid, split=split)
+        sid: {split: build_features(sid, split=split, row_set="past")
               for split in ("train", "val")}
         for sid in client_ids()
     }

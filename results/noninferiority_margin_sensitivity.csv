@@ -1,0 +1,6 @@
+margin,capacity_factor_percentage_points,ci_upper,noninferiority_passes,role
+0.0,0.0,-0.0005373240059134,True,post-hoc sensitivity
+0.0025,0.25,-0.0005373240059134,True,post-hoc sensitivity
+0.005,0.5,-0.0005373240059134,True,pre-specified primary
+0.0075,0.75,-0.0005373240059134,True,post-hoc sensitivity
+0.01,1.0,-0.0005373240059134,True,post-hoc sensitivity
