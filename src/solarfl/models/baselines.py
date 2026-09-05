@@ -23,7 +23,12 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from solarfl.data.features import MODEL_MATRIX, ROOT, build_features
+from solarfl.data.features import (
+    MODEL_MATRIX,
+    PAST_MODEL_MATRIX,
+    ROOT,
+    build_features,
+)
 from solarfl.data.splits import client_ids
 from solarfl.eval.metrics import mae, rmse, skill
 from solarfl.labels.capacity import station_labels
@@ -33,14 +38,17 @@ SEED = 0
 RESULTS_PATH = ROOT / "results/baselines_val.csv"
 
 VARIANTS = {
-    "past": [c for c in MODEL_MATRIX if not c.startswith("weather_future_")],
+    "past": PAST_MODEL_MATRIX,
     "perfect": MODEL_MATRIX,
 }
 
 
 def _load_all() -> dict[str, dict[str, tuple[pd.DataFrame, pd.Series]]]:
     return {
-        sid: {s: build_features(sid, split=s) for s in ("train", "val")}
+        sid: {
+            s: build_features(sid, split=s, row_set="common")
+            for s in ("train", "val")
+        }
         for sid in client_ids()
     }
 

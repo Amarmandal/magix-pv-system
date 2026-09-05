@@ -69,6 +69,32 @@ WEATHER_PAST_COLS = _GROUPS.get("weather_past", [])
 # the yaml states them separately, and D-014 is the claim that they *could* differ
 WEATHER_FUTURE_COLS = _GROUPS.get("weather_future", [])
 MODEL_MATRIX = _load_matrix(_GROUPS)
+PAST_MODEL_MATRIX = [
+    col for col in MODEL_MATRIX if not col.startswith("weather_future_")
+]
+RowSet = Literal["past", "common"]
+
+
+def _select_eligible_rows(df: pd.DataFrame, row_set: RowSet) -> pd.DataFrame:
+    """Apply the declared daylight and feature-availability row policy.
+
+    ``past`` represents the operational feature set and therefore cannot let
+    target-hour reanalysis availability decide which rows survive. ``common``
+    deliberately requires both variants so validation comparisons stay paired.
+    Daylight is enforced directly rather than indirectly through target-hour
+    ``kt``, which is undefined when top-of-atmosphere radiation is <= 10 W/m2.
+    """
+    if row_set == "past":
+        required = PAST_MODEL_MATRIX + [TARGET]
+    elif row_set == "common":
+        required = MODEL_MATRIX + [TARGET]
+    else:
+        raise ValueError(
+            f"unknown row_set: {row_set!r}; expected 'past' or 'common'"
+        )
+
+    daylight = df["is_daylight"].eq(1.0)
+    return df.loc[daylight].dropna(subset=required)
 
 
 def _lag_lookup(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
@@ -123,6 +149,7 @@ def build_features(
     station_id: str,
     split: str | None = None,
     *,
+    row_set: RowSet,
     return_timestamps: Literal[False] = False,
 ) -> tuple[pd.DataFrame, pd.Series]: ...
 
@@ -132,6 +159,7 @@ def build_features(
     station_id: str,
     split: str | None = None,
     *,
+    row_set: RowSet,
     return_timestamps: Literal[True],
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series]: ...
 
@@ -140,15 +168,16 @@ def build_features(
     station_id: str,
     split: str | None = None,
     *,
+    row_set: RowSet,
     return_timestamps: bool = False,
 ) -> tuple[pd.DataFrame, pd.Series] | tuple[pd.DataFrame, pd.Series, pd.Series]:
     """Build an aligned model matrix and target for one client.
 
-    Existing callers receive ``(X, y)``. Evaluation code that needs to retain
-    temporal grouping can request ``(X, y, timestamps)`` by passing
-    ``return_timestamps=True``. The timestamps are taken after split filtering
-    and required-value filtering, so row ``i`` refers to the same observation
-    in all three returned objects.
+    ``row_set='past'`` filters on operational predictors only, whereas
+    ``row_set='common'`` also requires target-hour reanalysis for paired
+    past/perfect-weather comparisons. Evaluation code that needs temporal
+    grouping can request ``(X, y, timestamps)``. Timestamps are taken after all
+    filtering, so row ``i`` refers to the same observation in each object.
     """
     labels = station_labels()
     capacity_kw = labels[station_id]["capacity_kw"]
@@ -216,8 +245,7 @@ def build_features(
     if split is not None:
         df = df[_split_mask(df["measured_ts"], station_id, split)]
 
-    required = MODEL_MATRIX + [TARGET]
-    df = df.dropna(subset=required)
+    df = _select_eligible_rows(df, row_set)
 
     X = df[MODEL_MATRIX].reset_index(drop=True)
     y = df[TARGET].reset_index(drop=True)

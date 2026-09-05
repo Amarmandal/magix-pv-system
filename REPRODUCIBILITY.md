@@ -7,7 +7,7 @@ modules under `src/solarfl/` are the authoritative experiment implementation.
 
 ## Scope
 
-The reproducibility target is the set of ten CSV files listed in
+The reproducibility target is the set of eleven CSV files listed in
 `results/SHA256SUMS`. PNG and PDF figures are derived from those tables by
 `notebooks/07_results-figures.ipynb` and
 `notebooks/08_test_results_figures.ipynb`.
@@ -62,7 +62,20 @@ uv run python -m unittest discover -v
 uv run python -m solarfl.eval.test_evaluation --smoke
 ```
 
-## 4. Regenerate the experiment tables
+## 4. Audit the Variant-A row mask
+
+```bash
+uv run python scripts/audit_variant_row_masks.py \
+  --output reproduced-results/variant_row_mask_audit.csv
+```
+
+The `past` row set requires only Variant-A predictors, the target, and explicit
+target-hour daylight. The `common` row set additionally requires target-hour
+reanalysis so exploratory past/perfect-weather comparisons remain paired. The
+audit reports whether that additional availability requirement excludes any
+otherwise eligible Variant-A timestamps.
+
+## 5. Regenerate the experiment tables
 
 Write regenerated outputs to a new directory. This preserves the archived
 tables and the one-shot test guard.
@@ -80,7 +93,7 @@ steps. Record the machine description and elapsed time when reporting an
 independent reproduction, for example with `/usr/bin/time -p` before each
 command.
 
-## 5. Compare with the archive
+## 6. Compare with the archive
 
 ```bash
 uv run python scripts/verify_results.py --candidate reproduced-results
