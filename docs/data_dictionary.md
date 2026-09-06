@@ -5,12 +5,12 @@
 | Column                           | Type     | Description                                  | Role       |
 | -------------------------------- | -------- | -------------------------------------------- | ---------- |
 | station_hash_id                  | string   | Unique station identifier                    | Excluded   |
-| measured_ts                      | datetime | Hourly timestamp                             | Time       |
-| total_produced_energy            | float    | Energy produced during the hour              | Target source |
+| measured_ts                      | datetime | UTC interval-start timestamp                 | Time       |
+| total_produced_energy            | float    | Energy in kWh over [T, T+1 hour)              | Target source |
 | source                           | int      | Data source identifier                       | Excluded   |
-| capacity_factor                  | float    | total_produced_energy / station rated kW     | **Target** |
+| capacity_factor                  | float    | hourly kWh / (retained inverter kW * 1 hour)     | **Target** |
 | temperature_2m                   | float    | Air temperature                              | Feature    |
-| shortwave_radiation              | float    | direct radiation + diffuse radiation         | Derived-feature input |
+| shortwave_radiation              | float    | Global horizontal irradiance (GHI), W/m²         | Derived-feature input |
 | direct_radiation                 | float    | Direct solar radiation                       | Feature    |
 | diffuse_radiation                | float    | Diffuse solar radiation                      | Feature    |
 | global_tilted_irradiance         | float    | Tilted Irradiance (GTI)                      | Feature    |
@@ -90,11 +90,11 @@ hand — if they disagree with the yaml, the yaml wins.
 
 ### Variant A — operational (past-only): **12 features**
 
-`history` + `geometry` + `weather_past`. Every input is knowable 24 h before the
-predicted hour, so this is the only variant whose scores describe a deployable
-forecaster.
+`history` + `geometry` + `weather_past`. This is the past-only offline configuration at a nominal 24-hour timestamp
+horizon. A complete hour labeled T−24 arrives after that hour ends; real-time
+input availability is not verified. See [solar semantics](solar_semantics.md).
 
-### Variant B — perfect-forecast: **17 features**
+### Variant B — perfect-weather upper bound: **17 features**
 
 Variant A + `weather_future`. Adds ERA5 reanalysis for the predicted hour
 itself, which stands in for a weather forecast that would in reality carry its
@@ -102,12 +102,19 @@ own error. Scores from this variant are an **upper bound**, not an achievable
 operational result, and must be labelled as such wherever they are reported
 (D-014).
 
-The gap between A and B is the cost of not knowing tomorrow's weather. It is
-worth reporting as a number in its own right — it separates "our model is weak"
-from "the weather input is the binding constraint".
+The archived A/B contrast is exploratory seed-0 validation evidence about
+target-hour input availability, not a causal cost estimate or a test endpoint.
 
-> **Implementation note.** `build_features()` currently returns the full 17-column
-> Variant B matrix only; there is no `variant=` argument yet. Variant A is
-> obtained by dropping the five `weather_future_*` columns from `X`. Both
-> variants share the same rows, since the `dropna` in `build_features` is applied
-> across all 17 columns.
+`build_features()` returns 17 columns; Variant-A callers explicitly select
+`PAST_MODEL_MATRIX` (12 columns). `row_set="past"` requires only past predictors,
+target and daylight; `row_set="common"` additionally requires target-hour
+reanalysis. See the existing variant-row-mask audit for their observed equality.
+
+Actual input widths remain 12/17. The constant `is_daylight` column is retained,
+leaving 11/16 nonconstant columns in pooled eligible data; these are not claims
+about independent information dimensions. MLP parameter counts remain
+2,945/3,265. The executable audit is `python -m solarfl.eval.manuscript_assets`.
+
+[Solar variable definitions and timestamp conventions](solar_semantics.md)
+define GHI, GTI, TOA, θz, E0 and units with provider/source citations.
+[Manuscript evidence](manuscript_evidence.md) documents capacity reconstruction and scope.

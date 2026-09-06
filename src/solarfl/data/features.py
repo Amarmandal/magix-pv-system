@@ -186,12 +186,17 @@ def build_features(
     df = add_capacity_factor(df, capacity_kw)
     df = df.sort_values("measured_ts").reset_index(drop=True)
 
-    # geometry -- TOA is terrestrial_radiation; E0 is the earth-sun distance
-    # correction, so toa / (solar_constant * E0) isolates cos(zenith)
+    # TOA = horizontal top-of-atmosphere solar irradiance (W/m2).
+    # The source shifts preceding-hour API means to interval-start UTC labels.
+    # This normalized hourly mean approximates the cosine of solar zenith;
+    # it is neither an angle nor an instantaneous solar-position calculation.
+    # Preserve D-008's 1361 W/m2 and 365-day E0 approximation (see docs/solar_semantics.md).
     doy = df["measured_ts"].dt.dayofyear
     e0 = 1 + 0.033 * np.cos(2 * np.pi * doy / 365)
     df["cos_zenith"] = (df["terrestrial_radiation"] / (1361 * e0)).clip(0, 1)
 
+    # GHI = shortwave_radiation, NOT global_tilted_irradiance (GTI).
+    # Ratios of irradiances in W/m2 are dimensionless.
     df["kt"] = np.where(
         df["terrestrial_radiation"] > 10,
         df["shortwave_radiation"] / df["terrestrial_radiation"],

@@ -1,0 +1,4 @@
+regime,optimizer,learning_rate,nominal_batch_size,budget,budget_unit,patience,optimizer_state,aggregation,stopping,seed_input,shuffle_rng,training_objective
+centralized MLP,Adam,0.001,256,300,epoch,25,retained across epochs,none,pooled validation MAE; strict improvement; restore best weights,s; torch.manual_seed(s),default_rng(s),MSE
+FedAvg,Adam,0.001,256,300,round,25,fresh per client per round,training-row-count weighted model average,pooled validation MAE; strict improvement; restore best weights,s; torch.manual_seed(s),default_rng(s+i); persistent stream per ordered client,MSE
+FedProx,Adam,0.001,256,300,round,25,fresh per client per round,training-row-count weighted model average,pooled validation MAE; strict improvement; restore best weights,s; torch.manual_seed(s),default_rng(s+i); persistent stream per ordered client,MSE + mu/2 squared distance to broadcast weights

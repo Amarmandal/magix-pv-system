@@ -56,9 +56,7 @@ def download_source(destination: Path) -> None:
         partial.unlink(missing_ok=True)
 
 
-def partition_frame(
-    frame: pd.DataFrame, manifest: dict
-) -> dict[str, pd.DataFrame]:
+def partition_frame(frame: pd.DataFrame, manifest: dict) -> dict[str, pd.DataFrame]:
     """Validate and split the source frame using the frozen client manifest."""
     missing = {KEY, TIMESTAMP} - set(frame.columns)
     if missing:
@@ -140,11 +138,25 @@ def main() -> None:
         help="download the exact Mendeley V2 source when --source is absent",
     )
     parser.add_argument(
+        "--audit-capacity",
+        action="store_true",
+        help="verify/download capacity sources and independently check frozen labels",
+    )
+    parser.add_argument(
         "--overwrite",
         action="store_true",
         help="replace client CSVs that differ from the verified source partition",
     )
     args = parser.parse_args()
+
+    if args.audit_capacity:
+        from solarfl.labels.capacity_audit import run as audit_capacity
+
+        audit_capacity(
+            args.source.parent,
+            ROOT / "reproduced-results/manuscript_evidence_audit",
+            download=args.download,
+        )
 
     if not args.source.exists():
         if not args.download:

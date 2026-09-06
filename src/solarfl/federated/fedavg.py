@@ -4,7 +4,9 @@ Hand-rolled rather than Flower so every step is inspectable: one round is
 broadcast -> local epochs on each client's own train split -> weighted average
 of the returned state_dicts (McMahan et al. 2017). Nothing leaves a client
 except model weights and, once at startup, per-feature aggregate stats for the
-global scaler — never raw rows.
+global scaler. This describes the training update, not a security boundary:
+the offline runner holds all public-data arrays and pools validation arrays.
+No formal privacy or secure aggregation is implemented.
 
 Frozen to match the baselines (D-018): same MLP(64, 32), Adam 1e-3, MSE,
 batch 256, seed 0, early stopping on pooled val MAE with patience 25 and
@@ -117,10 +119,13 @@ def fit_fedavg(
 ) -> FittedMLP:
     """Full-participation FedAvg over the given clients.
 
-    With local_epochs=1 a round does the same gradient work as one centralized
-    epoch, so max_rounds/patience mirror fit_mlp's epoch budget and the
-    early-stopping comparison is like-for-like. Stopping watches the POOLED
-    val MAE for the same reason the centralized baseline does (D-018).
+    At local_epochs=1, each round visits every training row once, approximately
+    matching one centralized epoch's data exposure. Client-specific batches,
+    fresh Adam moments, averaging and stopping trajectories differ, so this
+    does not isolate data configuration or match optimizer steps exactly.
+    Stopping watches pooled val MAE (D-018); the simulation pools val arrays.
+    ``seed`` controls initialization and persistent client shuffle streams;
+    the broad validation sweep uses 0, robustness runs pass seeds 0--4.
     """
     torch.manual_seed(seed)
     mu, sigma = _global_scaler(X_by_client)

@@ -1,0 +1,67 @@
+client,station_hash_id,device_hash_id,device_model,max_power,observation_rows,first_observation,last_observation,retained,reason,included_capacity_kw
+S1,19477f81a2058c850a09310b7795fd4f,6f79f7cb435c2e085c9194a5bb8b55e2,SDongleA-05,,0,,,False,no_rated_power_metadata,0.0
+S1,19477f81a2058c850a09310b7795fd4f,94aedd81bad035cc73968fe5b06f808a,SUN2000-40KTL-M3,44.0,2470,2024-12-31 23:00:00,2025-05-31 23:00:00,True,rated_and_observed_in_full_hourly_fact,44.0
+S1,19477f81a2058c850a09310b7795fd4f,c84b78eddb67e5ad02e16137af8a3f74,,,0,,,False,no_rated_power_metadata,0.0
+S2,ae68bd65b1c87d7a5985d1d5498442af,052990e776d07b3b44b6c0add04f908b,SDongleA-05,,0,,,False,no_rated_power_metadata,0.0
+S2,ae68bd65b1c87d7a5985d1d5498442af,c65473cc38070d9a622e063b9083eb43,SUN2000-40KTL-M3,44.0,1627,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,44.0
+S3,55cddba5799e63f231eae0eb8cca8247,0f8e9b27f81c632bb02e7b062ec1fb3a,SUN2000-40KTL-M3,44.0,1635,2025-01-01 08:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,44.0
+S3,55cddba5799e63f231eae0eb8cca8247,65cbb560ef01810cca7af8877ca994b4,Smart Logger,,0,,,False,no_rated_power_metadata,0.0
+S3,55cddba5799e63f231eae0eb8cca8247,6f8fdd2e10f98b034d2e3304cb9fbe36,SUN2000-40KTL-M3,44.0,1594,2025-01-01 08:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,44.0
+S3,55cddba5799e63f231eae0eb8cca8247,b2636b0a99361537624ad113fba363d4,SUN2000-40KTL-M3,44.0,1701,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,44.0
+S3,55cddba5799e63f231eae0eb8cca8247,ceb8d70c896745366babb636f963487b,PowerMeter,,0,,,False,no_rated_power_metadata,0.0
+S3,55cddba5799e63f231eae0eb8cca8247,e1064be3bcf17f4b2319774987bb4365,SUN2000-40KTL-M3,44.0,1635,2025-01-01 08:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,44.0
+S3,55cddba5799e63f231eae0eb8cca8247,fb382f6297e50efe8f212303a58e1b6e,SUN2000-40KTL-M3,44.0,1652,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,44.0
+S4,7534daaee746a48bc5b99132810f3e69,0bf12c739bc3bf549f05079f185f5e36,PowerMeter,,0,,,False,no_rated_power_metadata,0.0
+S4,7534daaee746a48bc5b99132810f3e69,0e23b9fa122a5a1e1f2005e1f8ccb4ae,SUN2000-50KTL-M3,55.0,1699,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S4,7534daaee746a48bc5b99132810f3e69,2f6caba3c498edeb8eaacae2fe59c0d6,Smart Logger,,0,,,False,no_rated_power_metadata,0.0
+S4,7534daaee746a48bc5b99132810f3e69,42a4960d658411c716206c043c41032b,SUN2000-50KTL-M3,55.0,1624,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S4,7534daaee746a48bc5b99132810f3e69,4dd34dace878e6bebf91a67f63cc3d61,SUN2000-50KTL-M3,55.0,1607,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S4,7534daaee746a48bc5b99132810f3e69,52a85060c52e3264499c2b7977c80ee4,SUN2000-50KTL-M3,55.0,1617,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S4,7534daaee746a48bc5b99132810f3e69,6187ec08ac3e790c94c9ae81b0af5e1c,SUN2000-50KTL-M3,55.0,1596,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S4,7534daaee746a48bc5b99132810f3e69,6773fffa87bd4b069c5be8cf15da35f4,SUN2000-50KTL-M3,55.0,1619,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S4,7534daaee746a48bc5b99132810f3e69,7688823f55741e3d661acf1289fe82e8,SUN2000-50KTL-M3,55.0,1695,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S4,7534daaee746a48bc5b99132810f3e69,cb305256d4f75b1e4f669edd0bb6d590,SUN2000-50KTL-M3,55.0,1580,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,143a2a64b6780b7f0e59c8389def9b73,SUN2000-50KTL-M3,55.0,1612,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,15de11e7df8168a60db8f55669d66e76,SUN2000-50KTL-M3,55.0,1616,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,160ea64085d4e06bd5d9a471687be8a2,SUN2000-50KTL-M3,55.0,1634,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,23c1064d4afe10e3af7fff7bd9c2a227,SUN2000-50KTL-M3,55.0,1569,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,240bebcaf50ec4b2aa38d1920e35d49b,SUN2000-50KTL-M3,55.0,1596,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,280e223d3860ecc20598194f198609ae,PowerMeter,,0,,,False,no_rated_power_metadata,0.0
+S5,b59685487a1fc5712e03c264f70cb656,324ca33bd1baa278096384a15ecf224e,PowerMeter,,0,,,False,no_rated_power_metadata,0.0
+S5,b59685487a1fc5712e03c264f70cb656,35420019254f89a1515bb87cd9033c7a,SUN2000-50KTL-M3,55.0,0,,,False,absent_from_full_hourly_fact,0.0
+S5,b59685487a1fc5712e03c264f70cb656,44d2bd4392557b79e07670b3c3271e83,SUN2000-50KTL-M3,55.0,1712,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,484582ba5d7642fa214a5d6e3b115b0a,SUN2000-50KTL-M3,55.0,1601,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,615509983ec3771acaaef2a0517288ff,SUN2000-50KTL-M3,55.0,1618,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,6b40d1c8dd3646dbbed653be28c84bf7,SUN2000-50KTL-M3,55.0,1572,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,9c0a99eee5e4e75b6abca6b42b0120b1,PowerMeter,,0,,,False,no_rated_power_metadata,0.0
+S5,b59685487a1fc5712e03c264f70cb656,b8bf1b3617442d9f93aab5177c0fe74b,SUN2000-50KTL-M3,55.0,0,,,False,absent_from_full_hourly_fact,0.0
+S5,b59685487a1fc5712e03c264f70cb656,bc3de30f28f46cb1584bc459e24f0a8b,SUN2000-50KTL-M3,55.0,1614,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S5,b59685487a1fc5712e03c264f70cb656,d121c17cfe570d008145247c5f7c1329,SUN2000-50KTL-M3,55.0,0,,,False,absent_from_full_hourly_fact,0.0
+S5,b59685487a1fc5712e03c264f70cb656,d6021f0a6b553a1ce3959cd94bb415fa,Smart Logger,,0,,,False,no_rated_power_metadata,0.0
+S5,b59685487a1fc5712e03c264f70cb656,d6e0b0559981e186a2a66e8c3dc799e7,SUN2000-50KTL-M3,55.0,1567,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,22a8a8cda7e139d01f0b204f4a7d80e8,SUN2000-50KTL-M3,55.0,1696,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,23f2061a5e1957c2a6ad0bd1f10c71d6,SUN2000-50KTL-M3,55.0,1611,2024-12-31 23:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,3223f6ee747ede5f21c5858a9ddc6fce,SUN2000-50KTL-M3,55.0,1685,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,3ebfa70231eb1bf4bdccc2395e7a0038,Smart Logger,,0,,,False,no_rated_power_metadata,0.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,44aaeb88850bacfd88cce3f4fc07566f,SUN2000-50KTL-M3,55.0,1622,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,482e765f7c51b73828cc1ee09aaf33b4,SUN2000-50KTL-M3,55.0,1581,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,5c9967edc408c21137963f59608fb229,SUN2000-50KTL-M3,55.0,1688,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,694806730a0023ba75fa26e196edaafe,SUN2000-50KTL-M3,55.0,1607,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,8da21cdc7d09f1ed5a39da5dbc40368c,SUN2000-50KTL-M3,55.0,1617,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,a86429d9f8a8ab924418ac9f802abed3,SUN2000-50KTL-M3,55.0,1685,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,cd1a83cbef7916db090aac3315778993,SUN2000-50KTL-M3,55.0,1700,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,dc8fae88167f73e17a152555e7580c1b,SUN2000-50KTL-M3,55.0,1578,2025-01-01 05:00:00,2025-05-31 18:00:00,True,rated_and_observed_in_full_hourly_fact,55.0
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,dd17bfe95171c7930716e08364bece38,PowerMeter,,0,,,False,no_rated_power_metadata,0.0
+S7,2c85da17f3ac504327da04874ef1a701,29f08f60676ea3c4e2085071c1957d8c,1603,100.0,5487,2024-06-27 12:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,2e1392d8173e175e4fa40a27aa555e09,1603,100.0,5493,2024-06-27 13:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,344ab044c0d49c4ff469f4784687b996,1603,100.0,4426,2024-06-27 13:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,372f9d827236b14028b1639e7548a7d2,1603,100.0,4422,2024-06-27 12:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,3c15abc5f41b335a03633ee7ef1283ad,1603,100.0,2739,2024-10-31 13:00:00,2025-05-31 20:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,47283549760df1b872b3936304fccb03,1603,100.0,2633,2024-10-31 13:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,594df11d8e82584b2ee6278a7cac9471,1603,100.0,4419,2024-06-27 13:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,81bb7116a3b66ac746c962735081578a,1603,100.0,3623,2024-08-18 12:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,8ee49d5fb0be213c10f82462bd26938e,1603,100.0,2734,2024-11-06 12:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,982b38b87df1b484e63eab0a842e7c89,1603,100.0,4411,2024-06-27 13:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,a2bc58707e3ac5b41a4a8f49900d675b,1603,100.0,4143,2024-11-07 13:00:00,2025-05-31 23:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,f273741daece92d1d6e524b4b37abd8e,1603,100.0,2773,2024-11-06 12:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0
+S7,2c85da17f3ac504327da04874ef1a701,f5faf19c11abf226ca01c0ca738466a9,1603,100.0,3814,2024-08-05 13:00:00,2025-05-31 19:00:00,True,rated_and_observed_in_full_hourly_fact,100.0

@@ -1,6 +1,11 @@
 """Target variable: capacity factor.
 
-capacity_factor = hourly energy (kWh) / station rated power (kW)
+capacity_factor = hourly energy (kWh) / (station rated power (kW) * 1 hour)
+
+The source labels UTC intervals [T, T+1 hour) by their start T. Denominators
+sum metadata max_power for rated devices present in the full hourly inverter
+fact table (D-009), not verified commissioned capacity. Reconstruct and verify
+them with ``python -m solarfl.labels.capacity_audit``.
 
 Values above 1.0 are impossible - an inverter cannot beat its own rating for
 a full hour. Those are blanked to NaN, not deleted, because splits.json checks
