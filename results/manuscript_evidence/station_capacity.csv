@@ -1,0 +1,8 @@
+client,station_hash_id,metadata_devices,rated_inverters,retained_inverters,excluded_rated_inverters,unrated_devices,all_rated_power_kw,excluded_rated_power_kw,capacity_kw,exclusion_rule
+S1,19477f81a2058c850a09310b7795fd4f,3,1,1,0,2,44.0,0.0,44.0,unrated metadata or absent from full hourly inverter fact
+S2,ae68bd65b1c87d7a5985d1d5498442af,2,1,1,0,1,44.0,0.0,44.0,unrated metadata or absent from full hourly inverter fact
+S3,55cddba5799e63f231eae0eb8cca8247,7,5,5,0,2,220.0,0.0,220.0,unrated metadata or absent from full hourly inverter fact
+S4,7534daaee746a48bc5b99132810f3e69,10,8,8,0,2,440.0,0.0,440.0,unrated metadata or absent from full hourly inverter fact
+S5,b59685487a1fc5712e03c264f70cb656,18,14,11,3,4,770.0,165.0,605.0,unrated metadata or absent from full hourly inverter fact
+S6,e2afd8af435a86d8bfe72dcbe937a5d6,13,11,11,0,2,605.0,0.0,605.0,unrated metadata or absent from full hourly inverter fact
+S7,2c85da17f3ac504327da04874ef1a701,13,13,13,0,0,1300.0,0.0,1300.0,unrated metadata or absent from full hourly inverter fact

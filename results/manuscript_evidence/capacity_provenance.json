@@ -1,0 +1,42 @@
+{
+  "source_manifest": {
+    "dataset_doi": "10.17632/4zgsckxpdy.2",
+    "version": 2,
+    "metadata_url": "https://data.mendeley.com/public-api/datasets/4zgsckxpdy/files?folder_id=root&version=2",
+    "verified_on": "2026-09-06",
+    "license": "CC-BY-4.0",
+    "files": {
+      "devices.csv": {
+        "file_id": "88e6e32f-7530-4ace-aec3-9c7ea190a2c0",
+        "sha256": "5ab654e5ecf32e1e34a9b0740cc9cb047c399eb838447c35df88b5ed6ad8362f",
+        "size_bytes": 7213,
+        "url": "https://data.mendeley.com/public-files/datasets/4zgsckxpdy/files/88e6e32f-7530-4ace-aec3-9c7ea190a2c0/file_downloaded"
+      },
+      "hourly_pv_weather_inverter.csv": {
+        "file_id": "8da948a7-8859-4c76-9b3a-5ec0c8585875",
+        "sha256": "826c7352935ec5c545447793fc111347e7861cc1a4265ae972e42f92cbb003e0",
+        "size_bytes": 25617208,
+        "url": "https://data.mendeley.com/public-files/datasets/4zgsckxpdy/files/8da948a7-8859-4c76-9b3a-5ec0c8585875/file_downloaded"
+      },
+      "hourly_pv_weather_station.csv": {
+        "file_id": "fac7b49d-96d8-4a4a-8d9b-4aa008683339",
+        "sha256": "fd504ae8ec39fad64f3b08adb546d2158c8f94f567bca03752616eb5555ddbd5",
+        "size_bytes": 4130562,
+        "url": "https://data.mendeley.com/public-files/datasets/4zgsckxpdy/files/fac7b49d-96d8-4a4a-8d9b-4aa008683339/file_downloaded"
+      },
+      "stations.csv": {
+        "file_id": "2f7f1b08-f3f6-4b27-b7ed-731136dcf39c",
+        "sha256": "da84df6944208e5b53eab8554e9b5ea2b06945a6fe7918026352004a10483d2b",
+        "size_bytes": 778,
+        "url": "https://data.mendeley.com/public-files/datasets/4zgsckxpdy/files/2f7f1b08-f3f6-4b27-b7ed-731136dcf39c/file_downloaded"
+      }
+    }
+  },
+  "frozen_labels_sha256": "1454b752b8382063afa50bdcb0bfc26236cfe27bd2c05bac11470231f4eb1a48",
+  "matches_frozen_labels": true,
+  "membership_rule": "rated device ID occurs at least once; energy sign not consulted",
+  "membership_scope": "full released hourly inverter fact, not training-only",
+  "observation_start_utc": "2024-06-27 12:00:00",
+  "observation_end_utc": "2025-05-31 23:00:00",
+  "commissioning_status_verified": false
+}

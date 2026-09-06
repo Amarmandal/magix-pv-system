@@ -3,9 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Reproducible research code for 24-hour-ahead photovoltaic capacity-factor
-forecasting across seven solar stations in North Macedonia. The study compares
+forecasting across seven solar stations in North Macedonia. Exploratory validation compares
 same-hour-yesterday persistence, local and centralized Ridge/MLP models,
-FedAvg, and FedProx.
+FedAvg, and FedProx. The frozen confirmatory test compares only centralized
+MLP with validation-selected FedProx E1 (mu=1), using past-only inputs and
+paired training seeds 0–4.
 
 The associated manuscript is:
 
@@ -27,9 +29,11 @@ so FedProx with one local epoch and `mu = 1` is non-inferior under the frozen
 rule.
 
 Federated training here does **not** provide differential privacy, secure
-aggregation, or protected parameter exchange. It avoids central collection of
-raw station rows but exchanges unprotected model updates and aggregate feature
-statistics.
+aggregation, or protected parameter exchange. Client training updates use separate station arrays and exchange unprotected
+model weights and aggregate feature statistics. This is an offline simulation
+on public data: the host can access all arrays, and validation arrays are
+pooled for early stopping. Station clients represent possible data silos, not
+verified ownership or privacy boundaries.
 
 ## Reproduce the study
 
@@ -38,7 +42,7 @@ public input, and run the fast checks:
 
 ```bash
 uv sync --locked
-uv run python scripts/prepare_data.py --download
+uv run python scripts/prepare_data.py --download --audit-capacity
 uv run python -c "from solarfl.data.splits import verify; verify()"
 uv run python -m unittest discover -v
 uv run python -m solarfl.eval.test_evaluation --smoke
@@ -59,8 +63,9 @@ license, and preparation procedure.
 - **Forecast horizon:** 24 hours.
 - **Clients:** one PV station per client, seven total.
 - **Splits:** frozen per-client chronological 70/15/15 train/validation/test.
-- **Operational inputs:** T−24 production and weather plus deterministic solar
-  geometry.
+- **Past-only inputs (Variant A):** production and weather at stored label
+  T−24 plus deterministic solar geometry. See [timestamp semantics](docs/solar_semantics.md)
+  for the interval-availability qualification of the nominal 24-hour horizon.
 - **Perfect-weather validation variant:** additionally uses ERA5 reanalysis at
   T as an optimistic upper bound, not a deployable forecast.
 - **Metrics:** daylight-only MAE, RMSE, and MAE skill against persistence.
@@ -74,8 +79,18 @@ Model and hyperparameter choices used validation only. The test split was
 opened after the D-029–D-031 protocol freeze; the final outputs are archived in
 `results/test_evaluation_*.csv`.
 
-See the [methodology overview](docs/figures/detail_methodology.png) for the data,
+See the [methodology overview](results/manuscript_evidence/overall_pipeline_2x.png) for the data,
 feature, training, and evaluation flow.
+
+## Manuscript evidence
+
+[Manuscript evidence](docs/manuscript_evidence.md) maps code changes to supporting
+capacity, architecture, split-count and scope assets. Regenerate them without
+training or new test predictions:
+
+```bash
+uv run python -m solarfl.eval.manuscript_assets --download
+```
 
 ## Repository layout
 

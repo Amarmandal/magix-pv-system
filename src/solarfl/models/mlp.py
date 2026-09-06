@@ -2,7 +2,8 @@
 
 Torch rather than sklearn's MLPRegressor because the federated stage (D-013)
 needs explicit weight access for FedAvg. Centralized, local, and federated runs
-must share this one model class or the comparison is confounded by architecture.
+share this model class to hold architecture fixed. Optimizer-state retention,
+aggregation and stopping dynamics still differ across training regimes.
 """
 
 from __future__ import annotations
@@ -62,6 +63,10 @@ def fit_mlp(
 
     Standardization stats come from the TRAIN split only — computing them on
     val would leak the evaluation distribution into training.
+    The single Adam optimizer retains its moments across epochs, unlike the
+    fresh optimizer constructed for every federated client-round. ``seed`` is
+    an input: the validation sweep defaults to 0; the confirmatory runner passes
+    each paired seed in 0--4 explicitly.
     """
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)

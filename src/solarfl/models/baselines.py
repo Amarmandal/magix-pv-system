@@ -6,8 +6,8 @@ Produces the two endpoints the federated stage will be judged against (D-013):
 
 Every result is reported per client on that client's VAL split — test stays
 untouched until the protocol freeze. Two feature variants per D-014:
-  - past:    weather observed at T-24 only (deployable)
-  - perfect: adds reanalysis weather at T (perfect-forecast upper bound)
+  - past:    weather at stored label T-24 (offline; see docs/solar_semantics.md)
+  - perfect: adds target-hour ERA5 reanalysis (perfect-weather upper bound)
 
 Run: uv run python -m solarfl.models.baselines
 """

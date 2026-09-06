@@ -41,13 +41,15 @@ uv run python -c "import solarfl"
 ## 2. Acquire and verify the data
 
 ```bash
-uv run python scripts/prepare_data.py --download
+uv run python scripts/prepare_data.py --download --audit-capacity
 uv run python -c "from solarfl.data.splits import verify; verify()"
 ```
 
-The preparation command downloads only
-`hourly_pv_weather_station.csv` from Mendeley Data V2, verifies its official
-SHA-256 checksum, and partitions it by station. See `data/README.md` for the
+The preparation command downloads `hourly_pv_weather_station.csv` from
+Mendeley Data V2, verifies its official SHA-256 checksum, and partitions it by
+station. With `--audit-capacity`, it also acquires/verifies `devices.csv`,
+`stations.csv`, and `hourly_pv_weather_inverter.csv`, independently reconstructs
+the retrospective capacity denominators, and checks the frozen station labels. See `data/README.md` for the
 DOI, license, exact file identifier, and the documented landing-page row-count
 discrepancy.
 
@@ -132,13 +134,31 @@ The post-hoc appendix sensitivity table reports the same decision for all
 examined non-negative margins from `0` to `0.010`; `0.005` remains the sole
 pre-specified primary margin.
 
+## Manuscript evidence audit and assets
+
+```bash
+uv run python -m solarfl.eval.manuscript_assets --download \
+  --output-dir reproduced-results/manuscript_evidence_audit
+```
+
+This descriptive command generates capacity/device audits, scope and
+optimization tables, input-width and row-count checks, and reusable figures.
+It does not train models or open the test for additional model selection.
+See [the manuscript evidence map](docs/manuscript_evidence.md) for the output inventory,
+source provenance and manuscript qualifications. These supplemental outputs
+have their own checksum manifest; the twelve primary reference CSVs stay frozen.
+
 ## Reproducibility boundaries
 
 - The source observations are published separately under CC BY 4.0 and are not
   relicensed by this repository.
 - The current federated simulation exchanges unprotected model updates and
   aggregate scaling statistics. It is not a differential-privacy or secure
-  aggregation implementation.
+  aggregation implementation. The host holds all public-data arrays and pools
+  validation predictors and targets for early stopping.
 - ERA5 values at the prediction timestamp appear only in the explicitly named
   perfect-weather validation variant. The primary test comparison uses the
-  deployable past-weather feature set.
+  past-only feature set at a nominal 24-hour timestamp horizon. The source
+  uses interval-start labels; complete lagged aggregates are available only
+  after their interval ends. Real-time dispatch and reanalysis latency are not
+  simulated; see `docs/solar_semantics.md`.

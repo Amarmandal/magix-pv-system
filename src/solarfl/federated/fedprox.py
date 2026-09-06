@@ -10,10 +10,10 @@ FedAvg — that arm doubles as a check that this clone reproduces
 results/fedavg_val.csv.
 
 Two experiment axes on top of the frozen D-018 setup:
-- local_epochs ∈ {1, 5}: drift accumulates over local epochs, so at E=1
-  FedProx is expected to match FedAvg; E=5 is where the proximal term can
-  actually earn its keep. FedAvg is re-run at E=5 too, so the comparison at
-  each E is like-for-like.
+- local_epochs ∈ {1, 5}: validation explores the effect of extra local passes.
+  The proximal penalty can affect either setting; it is zero at broadcast
+  initialization but can become nonzero after the first minibatch update.
+  FedAvg is also evaluated at E=5 to compare the methods at the same E.
 - mu ∈ {0.001, 0.01, 0.1, 1}: the FedProx paper's grid, selected per
   (variant, E) by pooled val MAE — the same selection signal as D-018.
 
@@ -149,12 +149,14 @@ def fit_fedprox(
 ) -> FittedMLP:
     """Full-participation FedProx over the given clients (FedAvg at prox_mu=0).
 
-    With local_epochs=1 a round does the same gradient work as one centralized
-    epoch, so max_rounds/patience mirror fit_mlp's epoch budget. At E=5 a
-    round does 5x the work — early stopping still counts rounds, so the E=5
-    arms get a larger total gradient budget; the comparison that stays fair is
-    FedProx-vs-FedAvg at the same E. Stopping watches the POOLED val MAE for
-    the same reason the centralized baseline does (D-018).
+    At E=1 each round visits every training row once, approximately matching
+    one centralized epoch's data exposure. Optimizer steps and moments are not
+    matched: clients reset Adam each round and their models are averaged.
+    E=5 makes five local passes per round and is an exploratory validation
+    comparison. Stopping uses pooled validation MAE and restores the best
+    round; the simulation pools validation predictors and targets centrally.
+    ``seed`` is supplied by the runner: 0 for the broad validation sweep and
+    each paired seed 0--4 for the frozen centralized-versus-FedProx test.
     """
     torch.manual_seed(seed)
     mu, sigma = _global_scaler(X_by_client)

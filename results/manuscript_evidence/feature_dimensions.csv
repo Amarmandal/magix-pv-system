@@ -1,0 +1,7 @@
+variant,split,eligible_rows,input_width,nonconstant_columns,constant_columns,trainable_parameters,architecture
+A,train,8719,12,11,is_daylight,2945,12 -> 64 ReLU -> 32 ReLU -> 1 linear
+B,train,8719,17,16,is_daylight,3265,17 -> 64 ReLU -> 32 ReLU -> 1 linear
+A,val,2059,12,11,is_daylight,2945,12 -> 64 ReLU -> 32 ReLU -> 1 linear
+B,val,2059,17,16,is_daylight,3265,17 -> 64 ReLU -> 32 ReLU -> 1 linear
+A,test,2094,12,11,is_daylight,2945,12 -> 64 ReLU -> 32 ReLU -> 1 linear
+B,test,2094,17,16,is_daylight,3265,17 -> 64 ReLU -> 32 ReLU -> 1 linear

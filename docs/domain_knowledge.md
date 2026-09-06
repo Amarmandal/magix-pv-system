@@ -7,7 +7,8 @@ These are the key domain concepts to understand before performing EDA or buildin
 ## 1. Irradiance
 
 **Definition:**  
-The amount of solar energy reaching a surface at a given moment.
+Radiant power incident on a surface per unit area. Irradiation is energy
+per unit area integrated over time, measured in J/m² or Wh/m².
 
 **Unit:**  
 `W/m²` (Watts per square meter)
@@ -308,3 +309,10 @@ Observed statistics:
 - range = [0.014, 0.791]
 
 The distribution matches the expected behavior of a clearness index, providing additional evidence that `terrestrial_radiation` behaves as top-of-atmosphere solar irradiance rather than terrestrial longwave radiation.
+
+## Current solar semantics
+
+See [solar_semantics.md](solar_semantics.md) for provider-verified variable
+definitions and the upstream timestamp shift. `cos_zenith` is a normalized
+hourly-mean feature, not an instantaneous angle. Historical empirical checks
+above are supporting observations rather than authoritative variable definitions.

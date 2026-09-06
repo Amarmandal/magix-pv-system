@@ -1,0 +1,26 @@
+source,split,role,seeds,variant,model,regime,clients,macro_mae,local_epochs,mu
+baselines_val.csv,validation,exploratory,0,past,mlp,central,7,0.1123,,
+baselines_val.csv,validation,exploratory,0,past,mlp,local,7,0.10197142857142857,,
+baselines_val.csv,validation,exploratory,0,past,persistence,-,7,0.12067142857142857,,
+baselines_val.csv,validation,exploratory,0,past,ridge,central,7,0.11538571428571427,,
+baselines_val.csv,validation,exploratory,0,past,ridge,local,7,0.12091428571428571,,
+baselines_val.csv,validation,exploratory,0,perfect,mlp,central,7,0.09032857142857142,,
+baselines_val.csv,validation,exploratory,0,perfect,mlp,local,7,0.08647142857142856,,
+baselines_val.csv,validation,exploratory,0,perfect,persistence,-,7,0.12067142857142857,,
+baselines_val.csv,validation,exploratory,0,perfect,ridge,central,7,0.09747142857142857,,
+baselines_val.csv,validation,exploratory,0,perfect,ridge,local,7,0.09497142857142858,,
+fedavg_val.csv,validation,exploratory,0,past,mlp,fedavg,7,0.1191857142857143,,
+fedavg_val.csv,validation,exploratory,0,perfect,mlp,fedavg,7,0.09812857142857144,,
+fedprox_val.csv,validation,exploratory,0,past,mlp,fedavg,7,0.1191857142857143,1.0,0.0
+fedprox_val.csv,validation,exploratory,0,past,mlp,fedavg,7,0.11577142857142857,5.0,0.0
+fedprox_val.csv,validation,exploratory,0,past,mlp,fedprox,7,0.1157142857142857,1.0,1.0
+fedprox_val.csv,validation,exploratory,0,past,mlp,fedprox,7,0.11387142857142855,5.0,1.0
+fedprox_val.csv,validation,exploratory,0,perfect,mlp,fedavg,7,0.09812857142857144,1.0,0.0
+fedprox_val.csv,validation,exploratory,0,perfect,mlp,fedavg,7,0.0931142857142857,5.0,0.0
+fedprox_val.csv,validation,exploratory,0,perfect,mlp,fedprox,7,0.09287142857142856,1.0,1.0
+fedprox_val.csv,validation,exploratory,0,perfect,mlp,fedprox,7,0.09297142857142858,5.0,0.01
+seed_robustness_val.csv,validation,validation seed robustness,0;1;2;3;4,past,mlp,central_mlp,7,0.11198577142857143,,
+seed_robustness_val.csv,validation,validation seed robustness,0;1;2;3;4,past,mlp,fedavg_e1,7,0.11654425714285714,,
+seed_robustness_val.csv,validation,validation seed robustness,0;1;2;3;4,past,mlp,fedprox_e1,7,0.11423482857142857,,
+test_evaluation_by_seed.csv,test,confirmatory,0;1;2;3;4,past,mlp,central_mlp,7,0.13340486449327218,,
+test_evaluation_by_seed.csv,test,confirmatory,0;1;2;3;4,past,mlp,fedprox_e1,7,0.12839700496777845,1.0,1.0

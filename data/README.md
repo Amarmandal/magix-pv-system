@@ -1,6 +1,6 @@
 # Data acquisition and provenance
 
-The data are not duplicated in this repository. The experiments use one file
+The data are not duplicated in this repository. The forecasting matrix and capacity audit use versioned files
 from the following public dataset:
 
 > Daskalov, Andrej; Zdravevski, Eftim (2026), “Dataset for unified
@@ -33,7 +33,7 @@ From the repository root, download the exact source file and partition it by
 station:
 
 ```bash
-uv run python scripts/prepare_data.py --download
+uv run python scripts/prepare_data.py --download --audit-capacity
 ```
 
 The command verifies the source checksum and the station IDs and row counts in
@@ -49,5 +49,26 @@ uv run python scripts/prepare_data.py \
   --source /path/to/hourly_pv_weather_station.csv
 ```
 
-The other twelve files in the Mendeley dataset are useful for provenance and
-exploration but are not required to execute the frozen forecasting pipeline.
+## Capacity inputs and deterministic reconstruction
+
+`--audit-capacity` also verifies `devices.csv`, `stations.csv`, and
+`hourly_pv_weather_inverter.csv`. Their exact V2 IDs, byte sizes, download URLs
+and official SHA-256 hashes are pinned in [source_manifest.json](../docs/source_manifest.json).
+Existing mismatched files fail verification and are never silently replaced.
+
+```bash
+uv run python -m solarfl.labels.capacity_audit --download
+```
+
+The audit sums metadata `max_power` (kW) for rated devices whose IDs appear in
+the full released hourly inverter fact table. The term “producing” in the
+historical notebook means observed membership, not positive energy or verified
+commissioning. It excludes three S5 rated devices totaling 165 kW and reproduces
+all seven frozen denominators. Device decisions, observation ranges and station
+sums are written under `reproduced-results/manuscript_evidence_audit/` by
+default; the config is only compared, never rewritten. Source-derived audit
+tables retain CC BY 4.0 attribution to the dataset authors above.
+
+The membership rule is retrospective over the full release, not training-only.
+For energy units and the source's UTC interval-start convention, see
+[solar_semantics.md](../docs/solar_semantics.md).

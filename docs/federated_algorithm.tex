@@ -1,0 +1,49 @@
+% Manuscript-ready pseudocode fragment. Requires amsmath and amssymb only.
+% Keep the training seed distinct from the bootstrap RNG seed.
+\noindent\textbf{Algorithm: full-participation federated training for seed $s$.}
+\begin{enumerate}
+\item \textbf{Inputs:} ordered client training sets $\{(X_i,y_i)\}_{i=1}^K$,
+pooled validation data, training seed $s$, local epochs $E$, proximal
+coefficient $\mu$, learning rate $10^{-3}$, nominal batch size $B=256$,
+at most 300 rounds, and patience 25.
+For FedAvg set $\mu=0$; the confirmatory FedProx run uses $E=1$, $\mu=1$.
+\item Form global training-only feature means and standard deviations from
+client sums, squared sums and row counts; replace zero standard deviations
+by one. Standardize training and validation inputs using these values.
+\item Set the Torch seed to $s$ and initialize the shared MLP weights
+$w^{(0)}$. Create one persistent NumPy shuffle generator with seed $s+i$
+for each client index $i=0,\ldots,K-1$ in sorted station-hash order.
+Initialize the best validation MAE to infinity and the patience counter to zero.
+\item For each round $r=0,\ldots,299$:
+\begin{enumerate}
+\item Broadcast $w^{(r)}$ to all clients. Each client loads these weights into
+a local copy and creates a \emph{fresh Adam optimizer}, with zero initial moments.
+\item For each of $E$ local epochs, shuffle the client's $n_i$ rows using its
+persistent generator and partition into $\max(1,\lfloor n_i/B\rfloor)$
+nearly equal batches, matching \texttt{numpy.array\_split} in the code.
+For each batch $b$, take an Adam step on
+\[
+\frac{1}{|b|}\sum_{j\in b}(f_w(x_j)-y_j)^2
++\frac{\mu}{2}\lVert w-w^{(r)}\rVert_2^2.
+\]
+The broadcast weights are a detached, fixed proximal anchor.
+\item Aggregate returned model weights as
+$w^{(r+1)}=\sum_i n_i w_i/\sum_i n_i$.
+Optimizer moments are neither returned nor aggregated.
+\item Evaluate pooled validation MAE using un-clipped predictions. A strict
+improvement stores the best weights and resets patience; otherwise increment
+patience. Stop after 25 consecutive rounds without improvement.
+\end{enumerate}
+\item Restore the best validation weights. Clip predictions to $[0,1]$ for
+reported MAE, RMSE and persistence skill.
+\item For the frozen confirmatory comparison, repeat the full fit for each
+$s\in\{0,1,2,3,4\}$, pairing with centralized MLP at the same seed. All model
+selection uses validation; only the frozen two-model comparison uses test data.
+\end{enumerate}
+\noindent The architecture and primary hyperparameters are held fixed across
+training regimes. Centralized Adam retains moments across epochs; federated
+clients reset moments each round. Aggregation, batch partitioning and stopping
+trajectories also differ. At $E=1$ data exposure is approximately matched per
+round/epoch; this does not isolate a causal effect of data configuration or
+equalize the number of optimizer steps. The offline simulation centrally
+holds validation arrays and provides no formal privacy guarantee.
