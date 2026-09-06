@@ -1,6 +1,6 @@
 [project]
 name = "solarfl"
-version = "1.0.0"
+version = "1.1.0"
 description = "Reproducible federated learning experiments for day-ahead photovoltaic forecasting"
 readme = "README.md"
 requires-python = ">=3.12.12"
