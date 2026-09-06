@@ -21,7 +21,7 @@ class ReleaseArtifactTests(unittest.TestCase):
     def test_release_metadata_parses(self) -> None:
         citation = yaml.safe_load((ROOT / "CITATION.cff").read_text())
         zenodo = json.loads((ROOT / ".zenodo.json").read_text())
-        self.assertEqual(citation["version"], "1.0.0")
+        self.assertEqual(citation["version"], "1.1.0")
         self.assertEqual(citation["license"], "MIT")
         self.assertEqual(len(citation["authors"]), 2)
         self.assertEqual(zenodo["license"], "MIT")

@@ -13,9 +13,9 @@ import pandas as pd
 import torch
 
 from solarfl.data.features import MODEL_MATRIX, PAST_MODEL_MATRIX, ROOT, build_features
-from solarfl.eval.manuscript_assets import experiment_scope
+from solarfl.eval.manuscript_assets import experiment_scope, run as audit_manuscript
 from solarfl.federated.fedprox import fit_fedprox
-from solarfl.labels.capacity_audit import derive_capacities, verified_sources
+from solarfl.labels.capacity_audit import derive_capacities, sha256, verified_sources
 from solarfl.models.mlp import MLP, fit_mlp
 
 
@@ -92,6 +92,57 @@ class CapacityAuditTests(unittest.TestCase):
         for entry in manifest["files"].values():
             self.assertEqual(len(entry["sha256"]), 64)
             self.assertIn(entry["file_id"], entry["url"])
+
+    def test_manuscript_output_is_limited_to_archived_tables_and_provenance(self):
+        expected = {
+            "capacity_device_audit.csv", "station_capacity.csv", "split_counts.csv",
+            "feature_dimensions.csv", "experiment_scope.csv", "optimization_protocol.csv",
+            "capacity_provenance.json", "asset_provenance.json", "SHA256SUMS",
+        }
+        archive = ROOT / "results/manuscript_evidence"
+        counts = pd.read_csv(archive / "split_counts.csv")
+        dimensions = pd.read_csv(archive / "feature_dimensions.csv")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw, output = root / "raw", root / "output"
+            raw.mkdir()
+            (root / "configs").mkdir()
+            self.devices.to_csv(raw / "devices.csv", index=False)
+            self.stations.to_csv(raw / "stations.csv", index=False)
+            self.obs.to_csv(raw / "hourly_pv_weather_inverter.csv", index=False)
+            labels, _, _ = derive_capacities(self.devices, self.stations, self.obs)
+            (root / "configs/station_labels.json").write_text(json.dumps(labels))
+            with (
+                patch("solarfl.labels.capacity_audit.ROOT", root),
+                patch("solarfl.labels.capacity_audit.verified_sources", return_value={}),
+                patch(
+                    "solarfl.eval.manuscript_assets.feature_and_split_audit",
+                    return_value=(counts, dimensions),
+                ),
+            ):
+                audit_manuscript(output, raw, ROOT / "results")
+                self.assertEqual({p.name for p in output.iterdir()}, expected)
+                for name in (
+                    "split_counts.csv", "feature_dimensions.csv",
+                    "experiment_scope.csv", "optimization_protocol.csv",
+                ):
+                    pd.testing.assert_frame_equal(
+                        pd.read_csv(output / name), pd.read_csv(archive / name)
+                    )
+                # A reused output directory may contain files owned by the user.
+                unrelated = output / "user-note.txt"
+                unrelated.write_text("keep me")
+                audit_manuscript(output, raw, ROOT / "results")
+                self.assertEqual(unrelated.read_text(), "keep me")
+            checksums = {
+                name: digest
+                for digest, name in (
+                    line.split() for line in (output / "SHA256SUMS").read_text().splitlines()
+                )
+            }
+            self.assertEqual(set(checksums), expected - {"SHA256SUMS"})
+            for name, digest in checksums.items():
+                self.assertEqual(sha256(output / name), digest)
 
 
 class TrainingDisclosureTests(unittest.TestCase):

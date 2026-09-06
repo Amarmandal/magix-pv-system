@@ -105,9 +105,9 @@ uv run python -m solarfl.eval.manuscript_assets --download
 
 ## Citation and license
 
-Citation metadata are in [CITATION.cff](CITATION.cff). After the first Zenodo
-release, cite the version-specific Zenodo DOI in the manuscript; a DOI badge can
-then be added here without changing the archived computation.
+Citation metadata are in [CITATION.cff](CITATION.cff). Cite the version-specific
+Zenodo DOI for the release used in the study. When archiving an updated release,
+update the manuscript's repository citation to that release's DOI and version.
 
 The software is released under the [MIT License](LICENSE). The input dataset
 retains its separate CC BY 4.0 license.
