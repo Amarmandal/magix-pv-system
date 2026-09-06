@@ -65,9 +65,9 @@ the full released hourly inverter fact table. The term “producing” in the
 historical notebook means observed membership, not positive energy or verified
 commissioning. It excludes three S5 rated devices totaling 165 kW and reproduces
 all seven frozen denominators. Device decisions, observation ranges and station
-sums are written under `results/manuscript_evidence/`; the config is only compared, never
-rewritten. Source-derived audit tables retain CC BY 4.0 attribution to the
-dataset authors above.
+sums are written under `reproduced-results/manuscript_evidence_audit/` by
+default; the config is only compared, never rewritten. Source-derived audit
+tables retain CC BY 4.0 attribution to the dataset authors above.
 
 The membership rule is retrospective over the full release, not training-only.
 For energy units and the source's UTC interval-start convention, see

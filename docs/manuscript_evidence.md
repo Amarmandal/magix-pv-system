@@ -1,9 +1,10 @@
 # Manuscript evidence and reproduction
 
-The curated [manuscript evidence packet](../results/manuscript_evidence/EVIDENCE_NOTES.md)
-contains the evidence map, six CSV tables, capacity source provenance and two
-current author-supplied figures. It contains no LaTeX fragments or duplicate
-exports. The manuscript and Prism prompt have not been edited in this cleanup.
+The curated [`results/manuscript_evidence/`](../results/manuscript_evidence/)
+directory contains six CSV tables, capacity source provenance and two current
+author-supplied figures. It contains no LaTeX fragments, duplicate exports, or
+separately generated evidence-notes file. The manuscript and Prism prompt have
+not been edited in this cleanup.
 
 ## Reproduce the full audit
 
@@ -23,8 +24,8 @@ The pre-cleanup 50-file packet is preserved locally in
 The full audit contains input hashes in `asset_provenance.json` and output
 hashes in `SHA256SUMS`; neither replaces `results/SHA256SUMS`. To refresh the
 upload packet after an audit, copy only its six listed CSVs and
-`capacity_provenance.json`, then reconcile the evidence notes. Keep the
-current author-supplied figures rather than generated historical diagrams.
+`capacity_provenance.json`. Keep the current author-supplied figures rather
+than generated historical diagrams.
 
 The source [solar semantics](solar_semantics.md), [source manifest](source_manifest.json)
 and [algorithm fragment](federated_algorithm.tex) remain in the repository for
