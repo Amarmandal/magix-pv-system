@@ -1,8 +1,8 @@
 """Generate manuscript evidence from frozen data/specs and archived results.
 
 This command performs descriptive audits only: it never fits models, selects
-hyperparameters, or evaluates new test predictions. Tables are emitted as CSV,
-Markdown and LaTeX; figures as PNG, PDF and SVG for manuscript reuse.
+hyperparameters, or evaluates new test predictions. Outputs are the six archived
+evidence CSVs, input/capacity provenance and checksums.
 """
 
 from __future__ import annotations
@@ -33,31 +33,11 @@ from solarfl.labels.capacity_audit import sha256
 from solarfl.models.mlp import MLP, fit_mlp
 
 
-def write_table(frame: pd.DataFrame, destination: Path) -> None:
-    """Write portable tables without adding a Markdown rendering dependency."""
-    frame.to_csv(destination.with_suffix(".csv"), index=False)
-    display = frame.fillna("").map(
-        lambda value: str(value).replace("|", "/").replace("\n", " ")
-    )
-    lines = [
-        "| " + " | ".join(frame.columns) + " |",
-        "| " + " | ".join(["---"] * len(frame.columns)) + " |",
-    ]
-    lines.extend(
-        "| " + " | ".join(row) + " |"
-        for row in display.itertuples(index=False, name=None)
-    )
-    destination.with_suffix(".md").write_text("\n".join(lines) + "\n")
-    frame.to_latex(
-        destination.with_suffix(".tex"), index=False, escape=True, float_format="%.6f"
-    )
-
-
-def feature_and_split_audit() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def feature_and_split_audit() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Count actual columns and raw/eligible rows, without fitting any model."""
     labels = station_labels()
     manifest = json.loads(SPLITS_PATH.read_text())["clients"]
-    rows, dimensions, columns = [], [], []
+    rows, dimensions = [], []
     pooled: dict[tuple[str, str], list[pd.DataFrame]] = {}
     for sid in sorted(labels, key=lambda key: labels[key]["label"]):
         raw = pd.read_csv(CLIENTS_DIR / f"{sid}.csv", parse_dates=["measured_ts"])
@@ -118,27 +98,7 @@ def feature_and_split_audit() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
                 "architecture": f"{X.shape[1]} -> 64 ReLU -> 32 ReLU -> 1 linear",
             }
         )
-        for position, name in enumerate(X.columns, 1):
-            group = next(
-                (
-                    g
-                    for g in ("history", "weather_past", "weather_future")
-                    if name.startswith(g + "_")
-                ),
-                "geometry",
-            )
-            columns.append(
-                {
-                    "variant": variant,
-                    "split": split,
-                    "position": position,
-                    "feature": name,
-                    "group": group,
-                    "unique_values": X[name].nunique(dropna=False),
-                    "constant": name in constants,
-                }
-            )
-    return pd.DataFrame(rows), pd.DataFrame(dimensions), pd.DataFrame(columns)
+    return pd.DataFrame(rows), pd.DataFrame(dimensions)
 
 
 def experiment_scope(results_dir: Path) -> pd.DataFrame:
@@ -243,239 +203,6 @@ def optimization_protocol() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def privacy_scope() -> pd.DataFrame:
-    return pd.DataFrame(
-        [
-            {
-                "stage": "partition",
-                "actual_behavior": "one public-data station per analytical client in one process",
-                "limitation": "possible data silo; ownership and confidentiality requirements not established",
-            },
-            {
-                "stage": "training",
-                "actual_behavior": "federated updates computed on separate client training arrays",
-                "limitation": "all arrays are accessible to the offline simulation host",
-            },
-            {
-                "stage": "scaling",
-                "actual_behavior": "per-feature sums, sums of squares and counts pooled",
-                "limitation": "aggregate statistics are unprotected",
-            },
-            {
-                "stage": "aggregation",
-                "actual_behavior": "client model weights returned each round",
-                "limitation": "unprotected updates; no secure aggregation or differential privacy",
-            },
-            {
-                "stage": "validation",
-                "actual_behavior": "validation predictors and targets concatenated in the simulation",
-                "limitation": "data locality applies to the training partition; validation is centrally accessible",
-            },
-            {
-                "stage": "evaluation",
-                "actual_behavior": "per-client predictions, targets and paired errors accessible to evaluator",
-                "limitation": "predictive utility assessed; no attack evaluation or formal privacy guarantee",
-            },
-        ]
-    )
-
-
-def make_figures(
-    output_dir: Path, dimensions: pd.DataFrame, counts: pd.DataFrame
-) -> None:
-    import matplotlib
-
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
-
-    def save(fig, name):
-        for suffix in ("png", "pdf", "svg"):
-            metadata = (
-                {"CreationDate": None, "ModDate": None}
-                if suffix == "pdf"
-                else ({"Date": None} if suffix == "svg" else {})
-            )
-            fig.savefig(
-                output_dir / f"{name}.{suffix}",
-                dpi=180,
-                bbox_inches="tight",
-                metadata=metadata,
-            )
-        plt.close(fig)
-
-    with plt.rc_context(
-        {
-            "font.family": "DejaVu Sans",
-            "font.size": 10,
-            "svg.hashsalt": "solarfl-manuscript-evidence",
-        }
-    ):
-        fig, ax = plt.subplots(figsize=(12, 8))
-        ax.set(xlim=(0, 12), ylim=(0, 8))
-        ax.axis("off")
-
-        def box(x, y, w, h, text, color="#e8eef5"):
-            ax.add_patch(
-                FancyBboxPatch(
-                    (x, y),
-                    w,
-                    h,
-                    boxstyle="round,pad=0.06",
-                    facecolor=color,
-                    edgecolor="#31536d",
-                )
-            )
-            ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=10)
-
-        def arrow(start, end):
-            ax.add_patch(
-                FancyArrowPatch(
-                    start, end, arrowstyle="-|>", mutation_scale=13, color="#31536d"
-                )
-            )
-
-        box(
-            2.2,
-            6.7,
-            7.6,
-            0.85,
-            "Public Mendeley V2 data · seven station clients\nVerified inverter membership and capacity denominators",
-        )
-        box(
-            2.2,
-            5.15,
-            7.6,
-            0.95,
-            "Frozen chronological splits · hourly timestamp lookup at T−24\nA: 12 input columns · B: 17 columns with target-hour ERA5 reanalysis",
-        )
-        arrow((6, 6.7), (6, 6.1))
-        box(
-            0.25,
-            2.55,
-            5.3,
-            1.65,
-            "Exploratory validation\nPersistence, local / centralized Ridge and MLP\nFedAvg / FedProx · A and perfect-weather B\nBroad sweep: seed 0 · E = 1 and E = 5",
-            "#fff1d6",
-        )
-        box(
-            6.45,
-            2.55,
-            5.3,
-            1.65,
-            "Frozen confirmatory test\nCentralized MLP vs selected FedProx only\nVariant A · E = 1 · mu = 1\nPaired training seeds s = 0, 1, 2, 3, 4",
-            "#def0e6",
-        )
-        arrow((4, 5.15), (2.9, 4.2))
-        arrow((8, 5.15), (9.1, 4.2))
-        arrow((5.55, 3.35), (6.45, 3.35))
-        ax.text(
-            6,
-            4.45,
-            "Select on validation; freeze before test",
-            ha="center",
-            fontsize=10,
-        )
-        box(
-            0.25,
-            0.55,
-            5.3,
-            1.15,
-            "Validation-only robustness: A, seeds 0–4\nCentralized / FedAvg E1 / FedProx E1\nNo confirmatory local or perfect-weather claim",
-            "#fff1d6",
-        )
-        box(
-            6.45,
-            0.55,
-            5.3,
-            1.15,
-            "Paired macro-MAE gap: FedProx − centralized\nUnion-calendar day bootstrap · margin 0.005\nCalendar / margin sensitivity labeled post-hoc",
-            "#def0e6",
-        )
-        arrow((2.9, 2.55), (2.9, 1.7))
-        arrow((9.1, 2.55), (9.1, 1.7))
-        ax.set_title("Experiment scope and evaluation flow", fontsize=16, pad=15)
-        save(fig, "methodology_scope")
-
-        fig, ax = plt.subplots(figsize=(10, 4.4))
-        ax.axis("off")
-        ax.set_title(
-            "Shared MLP architecture — actual input width is retained",
-            fontsize=14,
-            pad=15,
-        )
-        for y, variant in ((0.72, "A"), (0.29, "B")):
-            row = dimensions.query("variant == @variant and split == 'train'").iloc[0]
-            label = f"Variant {variant}: {row.input_width} inputs\n{row.nonconstant_columns} nonconstant columns"
-            ax.text(
-                0.02,
-                y,
-                label,
-                transform=ax.transAxes,
-                va="center",
-                bbox={"facecolor": "#e8eef5", "edgecolor": "#31536d", "pad": 10},
-            )
-            for x, text in (
-                (0.45, "64\nReLU"),
-                (0.68, "32\nReLU"),
-                (0.89, "1\nLinear"),
-            ):
-                ax.text(
-                    x,
-                    y,
-                    text,
-                    transform=ax.transAxes,
-                    ha="center",
-                    va="center",
-                    bbox={"facecolor": "#def0e6", "edgecolor": "#31536d", "pad": 10},
-                )
-            for x0, x1 in ((0.31, 0.40), (0.50, 0.63), (0.73, 0.84)):
-                ax.annotate(
-                    "",
-                    xy=(x1, y),
-                    xytext=(x0, y),
-                    xycoords="axes fraction",
-                    arrowprops={"arrowstyle": "->"},
-                )
-            ax.text(
-                0.43,
-                y - 0.16,
-                f"{row.trainable_parameters:,} trainable parameters",
-                transform=ax.transAxes,
-            )
-        ax.text(
-            0.02,
-            0.01,
-            "is_daylight remains in both matrices; constant-column count does not establish matrix rank.",
-            transform=ax.transAxes,
-            fontsize=10,
-        )
-        save(fig, "feature_architecture")
-
-        fig, axes = plt.subplots(1, 3, figsize=(12, 4.4), sharey=True)
-        for ax, split in zip(axes, ("train", "val", "test")):
-            sub = counts.query("variant == 'A' and split == @split")
-            x = np.arange(len(sub))
-            ax.bar(x - 0.19, sub.raw_rows, 0.38, label="Raw rows", color="#aab9c8")
-            ax.bar(
-                x + 0.19,
-                sub.eligible_rows,
-                0.38,
-                label="Model-eligible rows",
-                color="#28776c",
-            )
-            ax.set_xticks(x, sub.client)
-            ax.set_title(f"{split}: {sub.eligible_rows.sum():,} retained")
-            ax.spines[["top", "right"]].set_visible(False)
-        axes[0].set_ylabel("Observations")
-        axes[0].legend(fontsize=8)
-        fig.suptitle(
-            "Variant A: raw split counts and retained model observations", fontsize=14
-        )
-        fig.tight_layout()
-        save(fig, "split_retention")
-
-
 def run(
     output_dir: Path, raw_dir: Path, results_dir: Path, *, download: bool = False
 ) -> None:
@@ -484,111 +211,17 @@ def run(
             "use a separate review output directory to preserve archived results"
         )
     # A source mismatch must fail before any manuscript evidence is emitted.
-    capacities = audit_capacity(raw_dir, output_dir, download=download)
-    counts, dimensions, columns = feature_and_split_audit()
+    audit_capacity(raw_dir, output_dir, download=download)
+    counts, dimensions = feature_and_split_audit()
     scope = experiment_scope(results_dir)
-    totals = (
-        counts.groupby(["variant", "split"], sort=False)[
-            ["raw_rows", "eligible_rows", "excluded_rows"]
-        ]
-        .sum()
-        .reset_index()
-    )
     tables = {
-        "station_capacity": capacities,
         "split_counts": counts,
-        "split_totals": totals,
         "feature_dimensions": dimensions,
-        "feature_columns": columns,
         "experiment_scope": scope,
         "optimization_protocol": optimization_protocol(),
-        "data_locality_scope": privacy_scope(),
     }
     for name, frame in tables.items():
-        write_table(frame, output_dir / name)
-    compact_capacity = capacities[
-        [
-            "client",
-            "rated_inverters",
-            "retained_inverters",
-            "excluded_rated_inverters",
-            "all_rated_power_kw",
-            "excluded_rated_power_kw",
-            "capacity_kw",
-        ]
-    ].copy()
-    compact_capacity.columns = [
-        "Client",
-        "Rated n",
-        "Retained n",
-        "Excluded n",
-        "All kW",
-        "Excluded kW",
-        "Final kW",
-    ]
-    write_table(compact_capacity, output_dir / "manuscript_capacity")
-    compact_dimensions = dimensions.loc[
-        dimensions.split == "train",
-        [
-            "variant",
-            "input_width",
-            "nonconstant_columns",
-            "trainable_parameters",
-        ],
-    ].copy()
-    compact_dimensions.columns = [
-        "Variant",
-        "Input width",
-        "Nonconstant columns",
-        "Parameters",
-    ]
-    write_table(compact_dimensions, output_dir / "manuscript_architecture")
-    compact_counts = totals.loc[
-        totals.variant == "A",
-        [
-            "split",
-            "raw_rows",
-            "eligible_rows",
-            "excluded_rows",
-        ],
-    ].copy()
-    compact_counts.columns = ["Split", "Raw rows", "Eligible rows", "Excluded rows"]
-    write_table(compact_counts, output_dir / "manuscript_split_totals")
-    # Show the perfect-weather contrast at its actual evidence level; these
-    # macro means derive from the rounded seed-0 client scores in the archive.
-    base = pd.read_csv(results_dir / "baselines_val.csv")
-    contrasts = []
-    for regime in ("central", "local"):
-        sub = base.loc[(base.model == "mlp") & (base.regime == regime)]
-        means = sub.groupby("variant").mae.mean()
-        contrasts.append(
-            {
-                "Regime": regime,
-                "Split": "validation",
-                "Seed": 0,
-                "A MAE": means["past"],
-                "B MAE": means["perfect"],
-                "B minus A": means["perfect"] - means["past"],
-            }
-        )
-    federated = pd.read_csv(results_dir / "fedprox_val.csv")
-    for regime in ("fedavg", "fedprox"):
-        sub = federated.loc[
-            (federated.regime == regime) & (federated.local_epochs == 1)
-        ]
-        means = sub.groupby("variant").mae.mean()
-        contrasts.append(
-            {
-                "Regime": f"{regime} E1",
-                "Split": "validation",
-                "Seed": 0,
-                "A MAE": means["past"],
-                "B MAE": means["perfect"],
-                "B minus A": means["perfect"] - means["past"],
-            }
-        )
-    write_table(pd.DataFrame(contrasts), output_dir / "manuscript_perfect_weather")
-    make_figures(output_dir, dimensions, counts)
+        frame.to_csv(output_dir / f"{name}.csv", index=False)
     inputs = [
         SPLITS_PATH,
         ROOT / "configs/features.yaml",
@@ -610,14 +243,19 @@ def run(
     (output_dir / "asset_provenance.json").write_text(
         json.dumps(provenance, indent=2) + "\n"
     )
-    outputs = sorted(
-        p for p in output_dir.iterdir() if p.is_file() and p.name != "SHA256SUMS"
-    )
+    # Hash this run's outputs only, not unrelated files in a reused directory.
+    filenames = [
+        "capacity_device_audit.csv",
+        "station_capacity.csv",
+        "capacity_provenance.json",
+        "asset_provenance.json",
+        *(f"{name}.csv" for name in tables),
+    ]
+    outputs = [output_dir / name for name in sorted(filenames)]
     (output_dir / "SHA256SUMS").write_text(
         "".join(f"{sha256(p)}  {p.name}\n" for p in outputs)
     )
-    print(f"Review assets written to {output_dir}")
-    print(totals.to_string(index=False))
+    print(f"Evidence CSVs and provenance written to {output_dir}")
     print(dimensions.to_string(index=False))
 
 

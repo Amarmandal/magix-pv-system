@@ -53,8 +53,9 @@ the retrospective capacity denominators, and checks the frozen station labels. S
 DOI, license, exact file identifier, and the documented landing-page row-count
 discrepancy.
 
-Do not run `python -m solarfl.data.splits`: that maintenance entry point would
-regenerate the frozen split manifest.
+Do not run `python -m solarfl.data.splits`, even with `--help`: that maintenance
+entry point does not parse arguments and regenerates the frozen split manifest.
+Use the `verify()` call above to check the existing manifest.
 
 ## 3. Run data-independent checks
 
@@ -141,12 +142,35 @@ uv run python -m solarfl.eval.manuscript_assets --download \
   --output-dir reproduced-results/manuscript_evidence_audit
 ```
 
-This descriptive command generates capacity/device audits, scope and
-optimization tables, input-width and row-count checks, and reusable figures.
+This descriptive command generates the six manuscript evidence CSVs covering
+capacity/device audits, scope, optimization, input widths and row counts,
+plus capacity/input provenance JSON and a checksum manifest. It generates no
+image, PDF, SVG, Markdown or LaTeX exports or additional summary tables.
 It does not train models or open the test for additional model selection.
 See [the manuscript evidence map](docs/manuscript_evidence.md) for the output inventory,
 source provenance and manuscript qualifications. These supplemental outputs
 have their own checksum manifest; the twelve primary reference CSVs stay frozen.
+
+## Calendar-bootstrap sensitivity archive
+
+`results/calendar_sensitivity/` contains the paired hourly errors,
+`test_evaluation_calendar_bootstrap.csv` (10,000 draws for each of three designs),
+and `test_evaluation_calendar_sensitivity.csv`. These compare the frozen
+union-calendar bootstrap with post-hoc common-overlap and client-stratified
+alternatives. They supplement the primary result and are outside the twelve-file
+comparison performed by `scripts/verify_results.py`.
+
+The test-evaluation command in step 6 emits these three files directly into its
+`--output-dir`, alongside the primary tables. Compare them with the corresponding
+files in `results/calendar_sensitivity/`; the archive's subdirectory is an
+organizational choice, not the generator's default output layout.
+
+To check the two supplemental archives' committed bytes:
+
+```bash
+(cd results/calendar_sensitivity && shasum -a 256 -c SHA256SUMS)
+(cd results/manuscript_evidence && shasum -a 256 -c SHA256SUMS)
+```
 
 ## Reproducibility boundaries
 

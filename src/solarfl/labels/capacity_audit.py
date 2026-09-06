@@ -181,9 +181,6 @@ def run(raw_dir: Path, output_dir: Path, *, download: bool = False) -> pd.DataFr
     if output_dir.resolve() == frozen_path.parent.resolve():
         raise ValueError("audit output must not be the frozen configs directory")
     output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "station_labels.reconstructed.json").write_text(
-        json.dumps(labels, indent=2) + "\n"
-    )
     ledger.to_csv(output_dir / "capacity_device_audit.csv", index=False)
     table.to_csv(output_dir / "station_capacity.csv", index=False)
     provenance = {
